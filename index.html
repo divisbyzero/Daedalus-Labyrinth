@@ -28,6 +28,15 @@
       </div>
       <div id="statusMsg"></div>
     </div>
+    <div id="importPanel">
+      <label for="loopyInput">Import from Loopy — paste a game string or URL:</label>
+      <div id="importRow">
+        <input id="loopyInput" type="text" spellcheck="false"
+               placeholder="e.g.  7x7t0:a3b2a1…  or paste the full Loopy URL">
+        <button id="btnLoad">Load</button>
+      </div>
+      <div id="importError"></div>
+    </div>
     <div id="canvasWrapper">
       <canvas id="gameCanvas"></canvas>
     </div>
@@ -47,6 +56,7 @@
   <script src="js/state.js"></script>
   <script src="js/render.js"></script>
   <script src="js/puzzles.js"></script>
+  <script src="js/loopy-parser.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

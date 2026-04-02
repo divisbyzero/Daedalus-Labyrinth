@@ -8,6 +8,9 @@ const btnRedo       = document.getElementById('btnRedo');
 const btnReset      = document.getElementById('btnReset');
 const puzzleSelect  = document.getElementById('puzzleSelect');
 const statusMsg     = document.getElementById('statusMsg');
+const loopyInput    = document.getElementById('loopyInput');
+const btnLoad       = document.getElementById('btnLoad');
+const importError   = document.getElementById('importError');
 
 // ── App state ─────────────────────────────────────────────────────────────────
 
@@ -67,6 +70,27 @@ btnReset.addEventListener('click', () => {
 });
 
 puzzleSelect.addEventListener('change', () => initPuzzle(puzzleSelect.value));
+
+// ── Loopy import ──────────────────────────────────────────────────────────────
+
+function loadFromLoopyString(raw) {
+  importError.textContent = '';
+  const result = parseLoopyString(raw);
+  if (result.error) {
+    importError.textContent = result.error;
+    return;
+  }
+  state = new GameState(result.cells);
+  state.loadClues(result.clues);
+  renderer.resize(result.cells);
+  redraw();
+  statusMsg.textContent = `${result.cells}×${result.cells} puzzle loaded.`;
+}
+
+btnLoad.addEventListener('click', () => loadFromLoopyString(loopyInput.value));
+loopyInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadFromLoopyString(loopyInput.value);
+});
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 

@@ -143,10 +143,10 @@ class GameState {
     const black   = edges.filter(e => e === EDGE_BLACK).length;
     const deleted = edges.filter(e => e === EDGE_NONE).length;
 
-    if (black === 4)              return CELL.BLACK;
-    if (black === 3)              return CELL.GRAY;
-    if (black === 2 && deleted === 2) return CELL.YELLOW;
-    if (black <= 1 && deleted >= 3)   return CELL.RED;
+    if (black === 4)                return CELL.BLACK;
+    if (black === 3)                return CELL.GRAY;
+    if (black <= 1 && deleted >= 3) return CELL.RED;
+    if (deleted > 0)                return CELL.YELLOW;
     return CELL.WHITE;
   }
 

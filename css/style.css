@@ -132,3 +132,37 @@ canvas {
   color: #555;
   text-align: center;
 }
+
+/* Loopy import panel */
+#importPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 680px;
+  background: #ececec;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+#importRow {
+  display: flex;
+  gap: 8px;
+}
+
+#loopyInput {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 5px 8px;
+  border: 1px solid #999;
+  border-radius: 4px;
+}
+
+#importError {
+  color: #cc2222;
+  font-size: 0.82rem;
+  min-height: 1em;
+}
