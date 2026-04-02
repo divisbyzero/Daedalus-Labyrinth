@@ -18,12 +18,12 @@
         <button id="btnReset">Reset</button>
       </div>
       <div class="toolbar-group">
-        <label for="gridSize">Grid:</label>
-        <select id="gridSize">
-          <option value="4">4×4</option>
-          <option value="6" selected>6×6</option>
-          <option value="8">8×8</option>
-          <option value="10">10×10</option>
+        <label for="puzzleSelect">Puzzle:</label>
+        <select id="puzzleSelect">
+          <option value="demo-4">Demo 4×4 (with clues)</option>
+          <option value="blank-6">Blank 6×6</option>
+          <option value="blank-4">Blank 4×4</option>
+          <option value="sample-pdf">Sample from PDF (10×10)</option>
         </select>
       </div>
       <div id="statusMsg"></div>
@@ -46,6 +46,7 @@
   <script src="js/constants.js"></script>
   <script src="js/state.js"></script>
   <script src="js/render.js"></script>
+  <script src="js/puzzles.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

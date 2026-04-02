@@ -69,7 +69,18 @@ class GameState {
    */
   clickEdge(isH, r, c, forward) {
     const from = this.getEdge(isH, r, c);
-    const to   = forward ? (from + 1) % 3 : (from + 2) % 3;
+    // Left (forward):  NONE→GRAY→BLACK→GRAY→BLACK…  (BLACK wraps to GRAY, not NONE)
+    // Right (backward): BLACK→GRAY→NONE→GRAY→NONE… (NONE wraps to GRAY, not BLACK)
+    let to;
+    if (forward) {
+      to = (from === EDGE_NONE) ? EDGE_GRAY
+         : (from === EDGE_GRAY) ? EDGE_BLACK
+         :                        EDGE_GRAY;  // BLACK→GRAY
+    } else {
+      to = (from === EDGE_BLACK) ? EDGE_GRAY
+         : (from === EDGE_GRAY)  ? EDGE_NONE
+         :                         EDGE_GRAY; // NONE→GRAY
+    }
     if (from === to) return;
     this._undoStack.push({ isH, r, c, from, to });
     this._redoStack = [];
@@ -139,6 +150,34 @@ class GameState {
     return CELL.WHITE;
   }
 
+  // ── Vertex degree ─────────────────────────────────────────────────────────
+
+  /**
+   * Returns degree info for vertex (r, c):
+   *   black — number of currently black edges
+   *   gray  — number of currently gray edges
+   *   clue  — the clue value (null if none)
+   *
+   * Vertex (r,c) is adjacent to up to four edges:
+   *   left:  hEdges[r][c-1]   (if c > 0)
+   *   right: hEdges[r][c]     (if c < cells)
+   *   up:    vEdges[r-1][c]   (if r > 0)
+   *   down:  vEdges[r][c]     (if r < cells)
+   */
+  getVertexDegreeInfo(r, c) {
+    const C = this.cells;
+    const adj = [];
+    if (c > 0)    adj.push(this.hEdges[r][c - 1]);
+    if (c < C)    adj.push(this.hEdges[r][c]);
+    if (r > 0)    adj.push(this.vEdges[r - 1][c]);
+    if (r < C)    adj.push(this.vEdges[r][c]);
+    return {
+      black: adj.filter(e => e === EDGE_BLACK).length,
+      gray:  adj.filter(e => e === EDGE_GRAY).length,
+      clue:  this.clues[r][c],
+    };
+  }
+
   // ── Clues ────────────────────────────────────────────────────────────────
 
   /** Load an array of { r, c, value } clue descriptors. */
@@ -150,6 +189,7 @@ class GameState {
 
   // ── Reset ────────────────────────────────────────────────────────────────
 
+  /** Reset edge states to initial (all gray, perimeter black). Preserves clues. */
   reset() {
     const C = this.cells;
     for (let r = 0; r <= C; r++)
@@ -161,5 +201,6 @@ class GameState {
     this._undoStack = [];
     this._redoStack = [];
     this._initPerimeter();
+    // clues are intentionally preserved
   }
 }

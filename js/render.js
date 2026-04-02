@@ -54,12 +54,8 @@ class Renderer {
       for (let c = 0; c < C; c++) {
         const color = state.getCellColor(r, c);
         ctx.fillStyle = this._cellFill(color);
-        ctx.fillRect(
-          this.vx(c) + 0.5,
-          this.vy(r) + 0.5,
-          this.CELL - 1,
-          this.CELL - 1,
-        );
+        // Fill the full cell — edges draw on top, so no gaps needed here.
+        ctx.fillRect(this.vx(c), this.vy(r), this.CELL, this.CELL);
       }
     }
 
@@ -126,20 +122,47 @@ class Renderer {
   _drawVertex(ctx, state, r, c) {
     const x    = this.vx(c);
     const y    = this.vy(r);
-    const clue = state.clues[r][c];
+    const C    = state.cells;
 
-    if (clue !== null) {
-      // Clue vertex: filled black circle with white number
+    // Perimeter vertices sit on fixed boundary edges — they never get clue numbers.
+    const isPerimeter = (r === 0 || r === C || c === 0 || c === C);
+
+    const info = state.getVertexDegreeInfo(r, c);
+    if (isPerimeter) info.clue = null;
+
+    if (info.clue !== null) {
+      // Determine constraint state:
+      //   violated  — black edges already exceed clue, OR impossible to reach clue
+      //   satisfied — black edges == clue (exact)
+      //   progress  — still reachable, not yet met
+      const max = info.black + info.gray; // max achievable black edges
+      let fill;
+      if (info.black > info.clue || max < info.clue) {
+        fill = '#cc2222'; // violated — red
+      } else if (info.black === info.clue) {
+        fill = '#228833'; // satisfied — green
+      } else {
+        fill = '#111111'; // in progress — black
+      }
+
+      const R = this.VRAD + 4;
       ctx.beginPath();
-      ctx.arc(x, y, this.VRAD + 3, 0, Math.PI * 2);
-      ctx.fillStyle = '#000000';
+      ctx.arc(x, y, R, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
       ctx.fill();
 
+      // White ring so it reads clearly against any cell color
+      ctx.beginPath();
+      ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+
       ctx.fillStyle    = '#ffffff';
-      ctx.font         = `bold ${this.VRAD * 2}px sans-serif`;
+      ctx.font         = `bold ${Math.round(this.VRAD * 2.2)}px sans-serif`;
       ctx.textAlign    = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(String(clue), x, y);
+      ctx.fillText(String(info.clue), x, y);
     } else {
       // Plain vertex dot
       ctx.beginPath();
