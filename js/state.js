@@ -119,35 +119,54 @@ class GameState {
   }
 
   /**
-   * Cell color table (from spec):
-   *
-   * black  gray  deleted  color
-   *   4     0      0      BLACK
-   *   3     1      0      GRAY
-   *   3     0      1      GRAY
-   *   2     0      2      YELLOW
-   *   2     1      1      WHITE
-   *   2     2      0      WHITE
-   *   1     0      3      RED
-   *   1     1      2      WHITE
-   *   1     2      1      WHITE
-   *   1     3      0      WHITE
-   *   0     0      4      RED
-   *   0     1      3      RED
-   *   0     2      2      WHITE
-   *   0     3      1      WHITE
-   *   0     4      0      WHITE
+   * Base color — determined solely by this cell's own edge counts, ignoring
+   * what neighbors look like.  Used as a first pass before yellow promotion.
+   *   4 black              → BLACK
+   *   3 black              → GRAY
+   *   ≤1 black + ≥3 deleted → RED
+   *   otherwise            → WHITE
    */
-  getCellColor(r, c) {
+  _getCellBaseColor(r, c) {
     const edges   = this.getCellEdges(r, c);
     const black   = edges.filter(e => e === EDGE_BLACK).length;
     const deleted = edges.filter(e => e === EDGE_NONE).length;
-
     if (black === 4)                return CELL.BLACK;
     if (black === 3)                return CELL.GRAY;
     if (black <= 1 && deleted >= 3) return CELL.RED;
-    if (deleted > 0)                return CELL.YELLOW;
     return CELL.WHITE;
+  }
+
+  /**
+   * Final cell color.  A white cell is promoted to YELLOW only when:
+   *   1. It has at least one deleted edge, AND
+   *   2. Every in-bounds neighbor across a deleted edge is itself white
+   *      (not gray or red) — i.e. "neither tile is red or gray".
+   */
+  getCellColor(r, c) {
+    const base = this._getCellBaseColor(r, c);
+    if (base !== CELL.WHITE) return base;
+
+    const C = this.cells;
+    // [edge state, neighbor row, neighbor col]
+    const sides = [
+      [this.hEdges[r][c],         r - 1, c    ],  // top
+      [this.hEdges[r + 1][c],     r + 1, c    ],  // bottom
+      [this.vEdges[r][c],         r,     c - 1],  // left
+      [this.vEdges[r][c + 1],     r,     c + 1],  // right
+    ];
+
+    let hasDeleted = false;
+    for (const [edgeState, nr, nc] of sides) {
+      if (edgeState !== EDGE_NONE) continue;
+      hasDeleted = true;
+      // If the neighbor exists and is gray or red, stay white.
+      if (nr >= 0 && nr < C && nc >= 0 && nc < C) {
+        const nb = this._getCellBaseColor(nr, nc);
+        if (nb === CELL.GRAY || nb === CELL.RED) return CELL.WHITE;
+      }
+    }
+
+    return hasDeleted ? CELL.YELLOW : CELL.WHITE;
   }
 
   // ── Vertex degree ─────────────────────────────────────────────────────────
