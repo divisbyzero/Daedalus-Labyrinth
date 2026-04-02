@@ -197,6 +197,193 @@ class GameState {
     };
   }
 
+  // ── Graph analysis ───────────────────────────────────────────────────────
+
+  /** True if any edge is still in the undecided gray state. */
+  hasGrayEdges() {
+    const C = this.cells;
+    for (let r = 0; r <= C; r++)
+      for (let c = 0; c < C; c++)
+        if (this.hEdges[r][c] === EDGE_GRAY) return true;
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c <= C; c++)
+        if (this.vEdges[r][c] === EDGE_GRAY) return true;
+    return false;
+  }
+
+  /**
+   * Build an adjacency structure for all currently-black edges.
+   * Vertices are indexed as  r * V + c  where V = cells + 1.
+   */
+  _buildBlackGraph() {
+    const C = this.cells, V = C + 1, N = V * V;
+    const degree = new Int32Array(N);
+    const adj    = Array.from({ length: N }, () => []);
+
+    for (let r = 0; r <= C; r++)
+      for (let c = 0; c < C; c++)
+        if (this.hEdges[r][c] === EDGE_BLACK) {
+          const a = r * V + c, b = r * V + c + 1;
+          adj[a].push(b); adj[b].push(a);
+          degree[a]++;    degree[b]++;
+        }
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c <= C; c++)
+        if (this.vEdges[r][c] === EDGE_BLACK) {
+          const a = r * V + c, b = (r + 1) * V + c;
+          adj[a].push(b); adj[b].push(a);
+          degree[a]++;    degree[b]++;
+        }
+    return { adj, degree, V, N };
+  }
+
+  /** Partition non-isolated vertices into connected components. */
+  _findComponents(adj, degree, N) {
+    const visited    = new Uint8Array(N);
+    const components = [];
+    for (let start = 0; start < N; start++) {
+      if (degree[start] === 0 || visited[start]) continue;
+      const verts = [];
+      const queue = [start];
+      visited[start] = 1;
+      while (queue.length) {
+        const v = queue.pop();
+        verts.push(v);
+        for (const u of adj[v])
+          if (!visited[u]) { visited[u] = 1; queue.push(u); }
+      }
+      const isCycle = verts.every(v => degree[v] === 2);
+      components.push({ verts, isCycle });
+    }
+    return components;
+  }
+
+  /**
+   * Returns a Set of "r,c" keys for every cell that is part of a premature
+   * loop in the labyrinth path.
+   *
+   * The labyrinth path is modelled as a graph where:
+   *   - nodes  = cells
+   *   - edges  = deleted internal boundaries between adjacent cells
+   *              (a deleted shared edge is a "doorway" between two cells)
+   *
+   * A premature loop exists when this doorway graph contains a cycle while
+   * gray (undecided) edges still remain in the puzzle.  All cells in such a
+   * cycle-containing component are flagged as errors.
+   *
+   * Note: cycles in the black-edge graph (e.g. the perimeter, walled cells)
+   * are completely fine — only cycles in the cell-path graph are errors.
+   */
+  getErrorCellSet() {
+    if (!this.hasGrayEdges()) return new Set();
+
+    const C  = this.cells;
+    const ck = (r, c) => r * C + c;
+    const N  = C * C;
+
+    // Build doorway graph from deleted *internal* edges only.
+    // (Perimeter edges are never doorways — they bound the board.)
+    const adj = Array.from({ length: N }, () => []);
+
+    // Deleted horizontal internal edges: shared by cell(r-1,c) and cell(r,c)
+    for (let r = 1; r < C; r++)
+      for (let c = 0; c < C; c++)
+        if (this.hEdges[r][c] === EDGE_NONE) {
+          adj[ck(r - 1, c)].push(ck(r, c));
+          adj[ck(r, c)].push(ck(r - 1, c));
+        }
+
+    // Deleted vertical internal edges: shared by cell(r,c-1) and cell(r,c)
+    for (let r = 0; r < C; r++)
+      for (let c = 1; c < C; c++)
+        if (this.vEdges[r][c] === EDGE_NONE) {
+          adj[ck(r, c - 1)].push(ck(r, c));
+          adj[ck(r, c)].push(ck(r, c - 1));
+        }
+
+    // Find connected components; flag any that contain a cycle.
+    // A connected component on n nodes with >= n edges contains a cycle.
+    const visited = new Uint8Array(N);
+    const errorIdx = new Set();
+
+    for (let start = 0; start < N; start++) {
+      if (adj[start].length === 0 || visited[start]) continue;
+
+      const comp  = [];
+      let   edges = 0;
+      const queue = [start];
+      visited[start] = 1;
+      while (queue.length) {
+        const v = queue.pop();
+        comp.push(v);
+        for (const u of adj[v]) {
+          edges++;                       // each edge counted twice
+          if (!visited[u]) { visited[u] = 1; queue.push(u); }
+        }
+      }
+      edges /= 2;
+
+      if (edges >= comp.length)         // cycle present in this component
+        for (const v of comp) errorIdx.add(v);
+    }
+
+    const result = new Set();
+    for (const idx of errorIdx)
+      result.add(`${Math.floor(idx / C)},${idx % C}`);
+    return result;
+  }
+
+  /**
+   * Returns true when the puzzle is solved:
+   *   - no gray edges remain, and
+   *   - the doorway graph (cells connected via deleted edges) forms exactly
+   *     one connected component that is a single closed cycle, meaning every
+   *     cell on the labyrinth path is part of one continuous closed loop.
+   */
+  checkWin() {
+    if (this.hasGrayEdges()) return false;
+
+    const C  = this.cells;
+    const ck = (r, c) => r * C + c;
+    const N  = C * C;
+
+    const degree = new Int32Array(N);
+    const adj    = Array.from({ length: N }, () => []);
+
+    for (let r = 1; r < C; r++)
+      for (let c = 0; c < C; c++)
+        if (this.hEdges[r][c] === EDGE_NONE) {
+          adj[ck(r-1,c)].push(ck(r,c)); adj[ck(r,c)].push(ck(r-1,c));
+          degree[ck(r-1,c)]++;          degree[ck(r,c)]++;
+        }
+    for (let r = 0; r < C; r++)
+      for (let c = 1; c < C; c++)
+        if (this.vEdges[r][c] === EDGE_NONE) {
+          adj[ck(r,c-1)].push(ck(r,c)); adj[ck(r,c)].push(ck(r,c-1));
+          degree[ck(r,c-1)]++;          degree[ck(r,c)]++;
+        }
+
+    // Find all components of the doorway graph.
+    const visited = new Uint8Array(N);
+    const comps   = [];
+    for (let start = 0; start < N; start++) {
+      if (degree[start] === 0 || visited[start]) continue;
+      const verts = [];
+      const queue = [start];
+      visited[start] = 1;
+      while (queue.length) {
+        const v = queue.pop();
+        verts.push(v);
+        for (const u of adj[v]) if (!visited[u]) { visited[u] = 1; queue.push(u); }
+      }
+      comps.push(verts);
+    }
+
+    // Win: exactly one component, and every cell in it has degree exactly 2
+    // (every cell on the path has exactly two doorways — a proper closed loop).
+    return comps.length === 1 && comps[0].every(v => degree[v] === 2);
+  }
+
   // ── Clues ────────────────────────────────────────────────────────────────
 
   /** Load an array of { r, c, value } clue descriptors. */

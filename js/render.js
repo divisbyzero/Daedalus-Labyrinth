@@ -49,17 +49,17 @@ class Renderer {
     ctx.fillStyle = '#c8c8c8';
     ctx.fillRect(0, 0, W, W);
 
-    // 1. Cell fills
+    // 1. Cell fills — premature-loop cells override their normal color to red.
+    const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        const color = state.getCellColor(r, c);
+        const color = errorCells.has(`${r},${c}`) ? CELL.RED : state.getCellColor(r, c);
         ctx.fillStyle = this._cellFill(color);
-        // Fill the full cell — edges draw on top, so no gaps needed here.
         ctx.fillRect(this.vx(c), this.vy(r), this.CELL, this.CELL);
       }
     }
 
-    // 2. Edges (gray first so black edges draw on top at intersections)
+    // 2. Edges
     this._drawAllEdges(state, EDGE_GRAY);
     this._drawAllEdges(state, EDGE_BLACK);
 
@@ -98,24 +98,18 @@ class Renderer {
     }
 
     ctx.beginPath();
-
-    // Horizontal edges
-    for (let r = 0; r <= C; r++) {
+    for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++) {
         if (state.hEdges[r][c] !== targetState) continue;
         ctx.moveTo(this.vx(c),     this.vy(r));
         ctx.lineTo(this.vx(c + 1), this.vy(r));
       }
-    }
-    // Vertical edges
-    for (let r = 0; r < C; r++) {
+    for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++) {
         if (state.vEdges[r][c] !== targetState) continue;
         ctx.moveTo(this.vx(c), this.vy(r));
         ctx.lineTo(this.vx(c), this.vy(r + 1));
       }
-    }
-
     ctx.stroke();
   }
 

@@ -31,6 +31,20 @@ function initPuzzle(name) {
 function redraw() {
   renderer.render(state);
   updateButtons();
+  updateStatus();
+}
+
+function updateStatus() {
+  if (state.checkWin()) {
+    statusMsg.textContent = '🎉 Solved!';
+    statusMsg.style.color = '#228833';
+  } else if (state.getErrorCellSet().size > 0) {
+    statusMsg.textContent = 'Premature loop in labyrinth path';
+    statusMsg.style.color = '#cc2222';
+  } else {
+    statusMsg.textContent = '';
+    statusMsg.style.color = '';
+  }
 }
 
 function updateButtons() {
