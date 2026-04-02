@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daedalus's Labyrinth</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Daedalus's Labyrinth</h1>
+  </header>
+  <main>
+    <div id="toolbar">
+      <div class="toolbar-group">
+        <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
+        <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
+        <button id="btnReset">Reset</button>
+      </div>
+      <div class="toolbar-group">
+        <label for="gridSize">Grid:</label>
+        <select id="gridSize">
+          <option value="4">4×4</option>
+          <option value="6" selected>6×6</option>
+          <option value="8">8×8</option>
+          <option value="10">10×10</option>
+        </select>
+      </div>
+      <div id="statusMsg"></div>
+    </div>
+    <div id="canvasWrapper">
+      <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="legend">
+      <span class="legend-item"><span class="swatch" style="background:#fff;border:1px solid #999"></span>Undetermined</span>
+      <span class="legend-item"><span class="swatch" style="background:#ffee66;border:1px solid #cca800"></span>Path (2 edges)</span>
+      <span class="legend-item"><span class="swatch" style="background:#999;border:1px solid #666"></span>Needs fix (3 edges)</span>
+      <span class="legend-item"><span class="swatch" style="background:#222;border:1px solid #000"></span>Walled (4 edges)</span>
+      <span class="legend-item"><span class="swatch" style="background:#ff4444;border:1px solid #cc0000"></span>Error</span>
+    </div>
+    <div id="instructions">
+      <strong>Left-click</strong> an edge: cycle none → gray → black &nbsp;|&nbsp;
+      <strong>Right-click</strong>: cycle black → gray → none
+    </div>
+  </main>
+  <script src="js/constants.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

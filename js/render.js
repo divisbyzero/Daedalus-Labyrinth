@@ -1,0 +1,195 @@
+'use strict';
+
+/**
+ * Renderer — draws the DL board onto an HTML canvas.
+ *
+ * Coordinate system (logical pixels, DPR-scaled internally):
+ *   Vertex (r, c) is at pixel (MARGIN + c*CELL, MARGIN + r*CELL).
+ *   Cells are drawn in the space between vertices.
+ */
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx    = canvas.getContext('2d');
+    this.dpr    = window.devicePixelRatio || 1;
+
+    this.CELL   = 60;   // logical pixels per cell
+    this.MARGIN = 36;   // padding around the grid
+    this.VRAD   = 7;    // vertex dot radius
+    this.EHIT   = 14;   // hit-detection tolerance in px
+  }
+
+  // ── Setup ─────────────────────────────────────────────────────────────────
+
+  /** Resize the canvas to fit a board with `cells` cells per side. */
+  resize(cells) {
+    const total = this.MARGIN * 2 + cells * this.CELL;
+    const dpr   = this.dpr;
+    this.canvas.width        = total * dpr;
+    this.canvas.height       = total * dpr;
+    this.canvas.style.width  = `${total}px`;
+    this.canvas.style.height = `${total}px`;
+    // Apply DPR scaling once; all subsequent draw calls use logical pixels.
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // ── Coordinate helpers ────────────────────────────────────────────────────
+
+  vx(c) { return this.MARGIN + c * this.CELL; }
+  vy(r) { return this.MARGIN + r * this.CELL; }
+
+  // ── Main render ───────────────────────────────────────────────────────────
+
+  render(state) {
+    const { ctx } = this;
+    const C  = state.cells;
+    const W  = this.MARGIN * 2 + C * this.CELL;
+
+    // Background
+    ctx.fillStyle = '#c8c8c8';
+    ctx.fillRect(0, 0, W, W);
+
+    // 1. Cell fills
+    for (let r = 0; r < C; r++) {
+      for (let c = 0; c < C; c++) {
+        const color = state.getCellColor(r, c);
+        ctx.fillStyle = this._cellFill(color);
+        ctx.fillRect(
+          this.vx(c) + 0.5,
+          this.vy(r) + 0.5,
+          this.CELL - 1,
+          this.CELL - 1,
+        );
+      }
+    }
+
+    // 2. Edges (gray first so black edges draw on top at intersections)
+    this._drawAllEdges(state, EDGE_GRAY);
+    this._drawAllEdges(state, EDGE_BLACK);
+
+    // 3. Vertices (on top of everything)
+    for (let r = 0; r <= C; r++) {
+      for (let c = 0; c <= C; c++) {
+        this._drawVertex(ctx, state, r, c);
+      }
+    }
+  }
+
+  // ── Drawing helpers ───────────────────────────────────────────────────────
+
+  _cellFill(color) {
+    switch (color) {
+      case CELL.BLACK:  return '#1e1e1e';
+      case CELL.GRAY:   return '#9a9a9a';
+      case CELL.YELLOW: return '#ffee55';
+      case CELL.RED:    return '#ee3333';
+      default:          return '#f8f8f8';
+    }
+  }
+
+  _drawAllEdges(state, targetState) {
+    const { ctx } = this;
+    const C = state.cells;
+
+    if (targetState === EDGE_BLACK) {
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth   = 4.5;
+      ctx.lineCap     = 'round';
+    } else {
+      ctx.strokeStyle = '#b0b0b0';
+      ctx.lineWidth   = 1.5;
+      ctx.lineCap     = 'butt';
+    }
+
+    ctx.beginPath();
+
+    // Horizontal edges
+    for (let r = 0; r <= C; r++) {
+      for (let c = 0; c < C; c++) {
+        if (state.hEdges[r][c] !== targetState) continue;
+        ctx.moveTo(this.vx(c),     this.vy(r));
+        ctx.lineTo(this.vx(c + 1), this.vy(r));
+      }
+    }
+    // Vertical edges
+    for (let r = 0; r < C; r++) {
+      for (let c = 0; c <= C; c++) {
+        if (state.vEdges[r][c] !== targetState) continue;
+        ctx.moveTo(this.vx(c), this.vy(r));
+        ctx.lineTo(this.vx(c), this.vy(r + 1));
+      }
+    }
+
+    ctx.stroke();
+  }
+
+  _drawVertex(ctx, state, r, c) {
+    const x    = this.vx(c);
+    const y    = this.vy(r);
+    const clue = state.clues[r][c];
+
+    if (clue !== null) {
+      // Clue vertex: filled black circle with white number
+      ctx.beginPath();
+      ctx.arc(x, y, this.VRAD + 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+
+      ctx.fillStyle    = '#ffffff';
+      ctx.font         = `bold ${this.VRAD * 2}px sans-serif`;
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(clue), x, y);
+    } else {
+      // Plain vertex dot
+      ctx.beginPath();
+      ctx.arc(x, y, this.VRAD, 0, Math.PI * 2);
+      ctx.fillStyle = '#111111';
+      ctx.fill();
+    }
+  }
+
+  // ── Hit detection ─────────────────────────────────────────────────────────
+
+  /**
+   * Given a mouse position in logical canvas pixels, return the nearest edge
+   * within HIT tolerance, or null.
+   * Returns { isH, r, c } where isH=true means horizontal edge.
+   */
+  findEdge(mouseX, mouseY, state) {
+    const C    = state.cells;
+    const HIT  = this.EHIT;
+    let best   = null;
+    let bestD  = HIT + 1;
+
+    // Horizontal edges
+    for (let r = 0; r <= C; r++) {
+      const ey = this.vy(r);
+      const dy = Math.abs(mouseY - ey);
+      if (dy > HIT) continue;
+      for (let c = 0; c < C; c++) {
+        const x1 = this.vx(c), x2 = this.vx(c + 1);
+        if (mouseX < x1 - HIT || mouseX > x2 + HIT) continue;
+        const dx   = Math.max(0, x1 - mouseX, mouseX - x2);
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestD) { bestD = dist; best = { isH: true, r, c }; }
+      }
+    }
+
+    // Vertical edges
+    for (let c = 0; c <= C; c++) {
+      const ex = this.vx(c);
+      const dx = Math.abs(mouseX - ex);
+      if (dx > HIT) continue;
+      for (let r = 0; r < C; r++) {
+        const y1 = this.vy(r), y2 = this.vy(r + 1);
+        if (mouseY < y1 - HIT || mouseY > y2 + HIT) continue;
+        const dy   = Math.max(0, y1 - mouseY, mouseY - y2);
+        const dist = Math.hypot(dx, dy);
+        if (dist < bestD) { bestD = dist; best = { isH: false, r, c }; }
+      }
+    }
+
+    return best;
+  }
+}
