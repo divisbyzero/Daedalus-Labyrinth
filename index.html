@@ -21,71 +21,35 @@
         <button id="btnShowSolution">Show solution</button>
       </div>
       <div class="toolbar-group">
-        <label for="puzzleSelect">Puzzle:</label>
-        <select id="puzzleSelect">
-          <option value="demo-4">Demo 4×4 (with clues)</option>
-          <option value="blank-6">Blank 6×6</option>
-          <option value="blank-4">Blank 4×4</option>
-          <option value="sample-pdf">Sample from PDF (10×10)</option>
-        </select>
-      </div>
-      <div class="toolbar-group">
-        <label for="genSize">Generate:</label>
+        <label for="genSize">Size:</label>
         <select id="genSize">
           <option value="4">4×4</option>
-          <option value="5" selected>5×5</option>
+          <option value="5">5×5</option>
           <option value="6">6×6</option>
           <option value="7">7×7</option>
           <option value="8">8×8</option>
           <option value="9">9×9</option>
-          <option value="10">10×10</option>
+          <option value="10" selected>10×10</option>
           <option value="12">12×12</option>
           <option value="15">15×15</option>
         </select>
         <label for="genDiff">Difficulty:</label>
         <select id="genDiff">
-          <option value="0">Easy</option>
+          <option value="0" selected>Easy</option>
           <option value="1">Normal</option>
-          <option value="2" selected>Hard</option>
+          <option value="2">Hard</option>
         </select>
         <button id="btnGenerate">Generate</button>
       </div>
       <div id="statusMsg"></div>
     </div>
-    <div id="importPanel">
-      <label for="loopyInput">Import from Loopy — paste a game string or URL:</label>
-      <div id="importRow">
-        <input id="loopyInput" type="text" spellcheck="false"
-          placeholder="e.g.  7x7t0:a3b2a1…  or paste the full Loopy URL">
-        <button id="btnLoad">Load</button>
-      </div>
-      <div id="importError"></div>
-    </div>
     <div id="canvasWrapper">
       <canvas id="gameCanvas"></canvas>
-    </div>
-    <div id="legend">
-      <span class="legend-item"><span class="swatch"
-          style="background:#fff;border:1px solid #999"></span>Undetermined</span>
-      <span class="legend-item"><span class="swatch" style="background:#ffee66;border:1px solid #cca800"></span>Path (2
-        edges)</span>
-      <span class="legend-item"><span class="swatch" style="background:#999;border:1px solid #666"></span>Needs fix (3
-        edges)</span>
-      <span class="legend-item"><span class="swatch" style="background:#222;border:1px solid #000"></span>Walled (4
-        edges)</span>
-      <span class="legend-item"><span class="swatch"
-          style="background:#ff4444;border:1px solid #cc0000"></span>Error</span>
-    </div>
-    <div id="instructions">
-      <strong>Left-click</strong> an edge: cycle none → gray → black &nbsp;|&nbsp;
-      <strong>Right-click</strong>: cycle black → gray → none
     </div>
   </main>
   <script src="js/constants.js"></script>
   <script src="js/state.js"></script>
   <script src="js/render.js"></script>
-  <script src="js/puzzles.js"></script>
-  <script src="js/loopy-parser.js"></script>
   <script src="js/generator.js"></script>
   <script src="js/main.js"></script>
 </body>

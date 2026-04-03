@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -100,69 +102,5 @@ canvas {
   display: block;
   cursor: crosshair;
   border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* Legend */
-#legend {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  justify-content: center;
-  font-size: 0.82rem;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.swatch {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  flex-shrink: 0;
-}
-
-/* Instructions */
-#instructions {
-  font-size: 0.82rem;
-  color: #555;
-  text-align: center;
-}
-
-/* Loopy import panel */
-#importPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  max-width: 680px;
-  background: #ececec;
-  border: 1px solid #bbb;
-  border-radius: 6px;
-  padding: 10px 14px;
-  font-size: 0.85rem;
-}
-
-#importRow {
-  display: flex;
-  gap: 8px;
-}
-
-#loopyInput {
-  flex: 1;
-  font-family: monospace;
-  font-size: 0.85rem;
-  padding: 5px 8px;
-  border: 1px solid #999;
-  border-radius: 4px;
-}
-
-#importError {
-  color: #cc2222;
-  font-size: 0.82rem;
-  min-height: 1em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }

@@ -80,7 +80,7 @@ class Renderer {
     switch (color) {
       case CELL.BLACK: return '#1e1e1e';
       case CELL.GRAY: return '#9a9a9a';
-      case CELL.YELLOW: return '#ffee55';
+      case CELL.YELLOW: return '#b8e6a0';
       case CELL.RED: return '#ee3333';
       default: return '#f8f8f8';
     }
@@ -91,7 +91,7 @@ class Renderer {
     const C = state.cells;
 
     if (targetState === EDGE_BLACK) {
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = '#1a472a';
       ctx.lineWidth = 4.5;
       ctx.lineCap = 'round';
     } else {
@@ -139,7 +139,7 @@ class Renderer {
       } else if (info.black === info.clue) {
         fill = '#228833'; // satisfied — green
       } else {
-        fill = '#111111'; // in progress — black
+        fill = '#1a472a'; // in progress — dark green
       }
 
       const R = this.VRAD + 4;
@@ -164,7 +164,7 @@ class Renderer {
       // Plain vertex dot
       ctx.beginPath();
       ctx.arc(x, y, this.VRAD, 0, Math.PI * 2);
-      ctx.fillStyle = '#111111';
+      ctx.fillStyle = '#1a472a';
       ctx.fill();
     }
   }

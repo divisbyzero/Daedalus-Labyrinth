@@ -7,11 +7,7 @@ const btnUndo = document.getElementById('btnUndo');
 const btnRedo = document.getElementById('btnRedo');
 const btnReset = document.getElementById('btnReset');
 const btnShowSolution = document.getElementById('btnShowSolution');
-const puzzleSelect = document.getElementById('puzzleSelect');
 const statusMsg = document.getElementById('statusMsg');
-const loopyInput = document.getElementById('loopyInput');
-const btnLoad = document.getElementById('btnLoad');
-const importError = document.getElementById('importError');
 const genSize = document.getElementById('genSize');
 const genDiff = document.getElementById('genDiff');
 const btnGenerate = document.getElementById('btnGenerate');
@@ -29,23 +25,6 @@ function getSolutionCountUpTo2(s) {
     return countSolutions(clueGrid, s.cells, 2, undefined, s.entry, s.exit);
   }
   return countSolutions(clueGrid, s.cells, 2);
-}
-
-function initPuzzle(name) {
-  const { state: s, label } = loadPuzzle(name);
-  state = s;
-  renderer = renderer || new Renderer(canvas);
-  renderer.resize(state.cells);
-  redraw();
-
-  // Loopy-style puzzle instances are expected to have exactly one solution.
-  const solCount = getSolutionCountUpTo2(state);
-  if (solCount !== 1) {
-    statusMsg.textContent = 'This board is not a unique Loopy-style puzzle.';
-    statusMsg.style.color = '#cc2222';
-  } else {
-    statusMsg.textContent = '';
-  }
 }
 
 function redraw() {
@@ -138,16 +117,13 @@ btnShowSolution.addEventListener('click', () => {
   });
 });
 
-puzzleSelect.addEventListener('change', () => initPuzzle(puzzleSelect.value));
-
 // ── Generate ──────────────────────────────────────────────────────────────────
 
-btnGenerate.addEventListener('click', () => {
+function doGenerate() {
   const cells = parseInt(genSize.value, 10);
   const diff = parseInt(genDiff.value, 10);
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';
-  // Defer one frame so the browser can repaint the status before the DFS runs.
   requestAnimationFrame(() => {
     try {
       state = generatePuzzle(cells, diff);
@@ -164,39 +140,12 @@ btnGenerate.addEventListener('click', () => {
       statusMsg.style.color = '#cc2222';
     }
   });
-});
-
-// ── Loopy import ──────────────────────────────────────────────────────────────
-
-function loadFromLoopyString(raw) {
-  importError.textContent = '';
-  const result = parseLoopyString(raw);
-  if (result.error) {
-    importError.textContent = result.error;
-    return;
-  }
-
-  const imported = new GameState(result.cells);
-  imported.loadClues(result.clues);
-  if (result.entry && result.exit) imported.setEntryExit(result.entry, result.exit);
-
-  // Enforce uniqueness expectation for imports.
-  const solCount = getSolutionCountUpTo2(imported);
-  if (solCount !== 1) {
-    importError.textContent = 'Imported puzzle is not uniquely solvable.';
-    return;
-  }
-
-  state = imported;
-  renderer.resize(result.cells);
-  redraw();
-  statusMsg.textContent = '';
 }
 
-btnLoad.addEventListener('click', () => loadFromLoopyString(loopyInput.value));
-loopyInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') loadFromLoopyString(loopyInput.value);
-});
+btnGenerate.addEventListener('click', doGenerate);
+
+// Auto-generate on first visit.
+doGenerate();
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
