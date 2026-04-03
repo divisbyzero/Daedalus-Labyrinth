@@ -137,9 +137,9 @@ class Renderer {
       if (info.black > info.clue || max < info.clue) {
         fill = '#cc2222'; // violated — red
       } else if (info.black === info.clue) {
-        fill = '#228833'; // satisfied — green
+        fill = '#1a472a'; // satisfied — dark green
       } else {
-        fill = '#1a472a'; // in progress — dark green
+        fill = '#111111'; // in progress — black
       }
 
       const R = this.VRAD + 4;
@@ -161,9 +161,10 @@ class Renderer {
       ctx.textBaseline = 'middle';
       ctx.fillText(String(info.clue), x, y);
     } else {
-      // Plain vertex dot
+      // Plain vertex dot — same size as numbered vertices
+      const R = this.VRAD + 4;
       ctx.beginPath();
-      ctx.arc(x, y, this.VRAD, 0, Math.PI * 2);
+      ctx.arc(x, y, R, 0, Math.PI * 2);
       ctx.fillStyle = '#1a472a';
       ctx.fill();
     }
