@@ -80,7 +80,7 @@ function generateLoop(N) {
   }
 
   function canColourCell(r, c, colour) {
-    if (board[r][c] !== GREY) return false;
+    if (board[r][c] === colour) return false;
 
     let foundNeighbour = false;
     for (const [nr, nc] of cellNeighbours(r, c)) {
@@ -156,7 +156,12 @@ function generateLoop(N) {
     board[chosen.r][chosen.c] = colour;
   }
 
-  // ── Tendril-growing pass ─────────────────────────────────────────────────
+  // ── Tendril-growing pass (port of loopgen.c) ─────────────────────────────
+  // Go through all coloured faces in shuffled order and flip any face
+  // that can legally flip and is adjacent to exactly one opposite-colour
+  // neighbour. This grows "tendrils" into monochrome clumps, increasing
+  // the loop's boundary length. Repeat until no more flips are possible,
+  // then do one final pass with random flips (10% chance).
   const faceOrder = _shuffle(Array.from({ length: G * G }, (_, i) => i));
 
   let doRandomPass = false;
@@ -164,19 +169,17 @@ function generateLoop(N) {
     let flipped = false;
     for (const idx of faceOrder) {
       const r = (idx / G) | 0, c = idx % G;
+      // Skip border vertices (locked BLACK for perimeter constraint)
+      if (r === 0 || r === G - 1 || c === 0 || c === G - 1) continue;
+      if (board[r][c] !== WHITE && board[r][c] !== BLACK) continue;
       const opp = (board[r][c] === WHITE) ? BLACK : WHITE;
       if (!canColourCell(r, c, opp)) continue;
-      const orig = board[r][c];
-      board[r][c] = GREY;
-      if (!canColourCell(r, c, opp)) { board[r][c] = orig; continue; }
       if (doRandomPass) {
-        if (Math.random() < 0.1) board[r][c] = opp; else board[r][c] = orig;
+        if (Math.random() < 0.1) board[r][c] = opp;
       } else {
         if (numNeighboursOfColour(r, c, opp) === 1) {
           board[r][c] = opp;
           flipped = true;
-        } else {
-          board[r][c] = orig;
         }
       }
     }
