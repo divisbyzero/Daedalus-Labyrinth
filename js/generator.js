@@ -35,88 +35,211 @@ function _shuffle(arr) {
   return arr;
 }
 
-// ── Phase 1: Random cycle generation ──────────────────────────────────────────
+// ── Phase 1: Random loop generation via face colouring ────────────────────────
 
 /**
- * Find a random simple cycle on the N×N cell grid.
+ * Port of loopgen.c generate_loop() for a square grid.
  *
- * Returns an array of [r, c] cells (without repeating the start cell), or
- * null if no cycle is found after multiple randomized attempts.
+ * Colours every cell of the N×N grid BLACK (outside) or WHITE (inside).
+ * The boundary between BLACK and WHITE regions forms a single closed loop
+ * that defines the doorway edges.
+ *
+ * Returns { hS, vS } edge arrays:
+ *   hS[r][c]   r ∈ [0..N], c ∈ [0..N-1]   — horizontal edges
+ *   vS[r][c]   r ∈ [0..N-1], c ∈ [0..N]   — vertical edges
+ * Each entry is EDGE_NONE (doorway, on the loop) or EDGE_BLACK (wall).
  */
-function findRandomCycle(N) {
-  const visited = Array.from({ length: N }, () => new Uint8Array(N));
-  const path = [];
+function generateLoop(N) {
+  const GREY = 0, WHITE = 1, BLACK = 2;
+
+  // board[r][c] — colour of each cell; starts GREY.
+  const board = Array.from({ length: N }, () => new Int8Array(N)); // 0 = GREY
+
+  // For the exterior "virtual face": always BLACK.
+  // A cell is adjacent to the exterior if it's on the perimeter row/col.
+  function faceColour(r, c) {
+    if (r < 0 || r >= N || c < 0 || c >= N) return BLACK; // exterior
+    return board[r][c];
+  }
+
+  // Neighbours of cell (r,c): the 4 orthogonal cells + exterior represented as null.
+  // We return [{r,c}] for real cells, but for scoring/adjacency we use faceColour.
   const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-  // Avoid tiny loops; encourage medium/large loops for better clue variety.
-  const minLen = Math.max(4, Math.floor((N * N) * 0.35));
-
-  function nbrs(r, c) {
+  function cellNeighbours(r, c) {
     const out = [];
     for (const [dr, dc] of DIRS) {
       const nr = r + dr, nc = c + dc;
-      if (nr >= 0 && nr < N && nc >= 0 && nc < N) out.push([nr, nc]);
+      out.push([nr, nc]); // may be out-of-bounds → exterior
     }
     return out;
   }
 
-  function onwardMoves(r, c) {
-    let d = 0;
-    for (const [nr, nc] of nbrs(r, c)) if (!visited[nr][nc]) d++;
-    return d;
-  }
+  /**
+   * can_colour_face() port: can we colour cell (r,c) with `colour`
+   * without creating a topological violation?
+   *
+   * Rules:
+   *  1. Must be adjacent to at least one cell of the same colour.
+   *  2. Walking around the cell's perimeter (inflated outward), the number
+   *     of colour/not-colour transitions must be exactly 2.
+   */
+  function canColourCell(r, c, colour) {
+    if (board[r][c] !== GREY) return false;
 
-  function dfs(r, c, sr, sc) {
-    visited[r][c] = 1;
-    path.push([r, c]);
+    // Rule 1: must be adjacent to at least one same-coloured face.
+    let foundNeighbour = false;
+    for (const [nr, nc] of cellNeighbours(r, c)) {
+      if (faceColour(nr, nc) === colour) { foundNeighbour = true; break; }
+    }
+    if (!foundNeighbour) return false;
 
-    // If we're adjacent to start and the path is long enough, close cycle.
-    if (path.length >= minLen && Math.abs(r - sr) + Math.abs(c - sc) === 1) {
-      return true;
+    // Rule 2: count colour transitions around the cell's surrounding faces.
+    // For a square cell, the "inflated perimeter" visits 8 surrounding faces
+    // in order (the 4 edge-adjacent + 4 corner-adjacent), going clockwise:
+    //   top, top-right, right, bottom-right, bottom, bottom-left, left, top-left
+    const surrounding = [
+      [r - 1, c],     // top
+      [r - 1, c + 1], // top-right
+      [r, c + 1],     // right
+      [r + 1, c + 1], // bottom-right
+      [r + 1, c],     // bottom
+      [r + 1, c - 1], // bottom-left
+      [r, c - 1],     // left
+      [r - 1, c - 1], // top-left
+    ];
+    let transitions = 0;
+    const n = surrounding.length;
+    let prev = (faceColour(surrounding[n - 1][0], surrounding[n - 1][1]) === colour);
+    for (let i = 0; i < n; i++) {
+      const cur = (faceColour(surrounding[i][0], surrounding[i][1]) === colour);
+      if (cur !== prev) transitions++;
+      prev = cur;
     }
 
-    // Continue extending the path through unvisited neighbours.
-    const nexts = nbrs(r, c).filter(([nr, nc]) => !visited[nr][nc]);
-    _shuffle(nexts);
-    nexts.sort((a, b) => onwardMoves(a[0], a[1]) - onwardMoves(b[0], b[1]));
-
-    for (const [nr, nc] of nexts) if (dfs(nr, nc, sr, sc)) return true;
-
-    visited[r][c] = 0; path.pop(); return false;
+    return transitions === 2;
   }
 
-  const starts = _shuffle(Array.from({ length: N * N }, (_, i) => [(i / N) | 0, i % N]));
-  for (const [sr, sc] of starts) {
-    for (let r = 0; r < N; r++) visited[r].fill(0);
-    path.length = 0;
-    if (dfs(sr, sc, sr, sc)) return path.slice();
+  /** Count neighbours of cell (r,c) that have the given colour. */
+  function numNeighboursOfColour(r, c, colour) {
+    let count = 0;
+    for (const [nr, nc] of cellNeighbours(r, c))
+      if (faceColour(nr, nc) === colour) count++;
+    return count;
   }
-  return null;
-}
 
-// ── Phase 2: Extract clues from solution ─────────────────────────────────────
+  /**
+   * Score for colouring a cell: we want to maximise loopiness, so we favour
+   * cells with fewer same-coloured neighbours (negative count → higher score
+   * = more "frontier" feel).
+   */
+  function cellScore(r, c, colour) {
+    return -numNeighboursOfColour(r, c, colour);
+  }
 
-/**
- * Convert a simple cycle to solution edge states.
- *
- * Edges shared between consecutive cycle cells → EDGE_NONE  (doorways).
- * All other edges (internal walls + perimeter)  → EDGE_BLACK (walls).
- *
- * hS[r][c]  r ∈ [0..N],   c ∈ [0..N-1]
- * vS[r][c]  r ∈ [0..N-1], c ∈ [0..N]
- */
-function _cycleToSolution(cycle, N) {
+  // ── Main face-colouring loop (loopgen.c generate_loop) ───────────────────
+
+  // Colour one random cell WHITE.
+  const startIdx = (Math.random() * N * N) | 0;
+  board[(startIdx / N) | 0][startIdx % N] = WHITE;
+
+  // Each GREY cell has a random tiebreaker (fixed for this generation run).
+  const randomKey = Array.from({ length: N * N }, () => Math.random());
+
+  // Sorted candidate lists (we re-sort each iteration; N is small enough).
+  function buildCandidates(colour) {
+    const list = [];
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        if (board[r][c] !== GREY) continue;
+        if (canColourCell(r, c, colour)) {
+          list.push({
+            r, c,
+            score: cellScore(r, c, colour),
+            rnd: randomKey[r * N + c],
+          });
+        }
+      }
+    }
+    // Sort descending by score, then descending by random tiebreaker.
+    list.sort((a, b) => (b.score - a.score) || (b.rnd - a.rnd));
+    return list;
+  }
+
+  while (true) {
+    const lightable = buildCandidates(WHITE);
+    const darkable = buildCandidates(BLACK);
+    if (lightable.length === 0 && darkable.length === 0) break;
+
+    // Pick WHITE or BLACK at random.
+    const colour = Math.random() < 0.5 ? WHITE : BLACK;
+    const candidates = (colour === WHITE) ? lightable : darkable;
+
+    // Pick the best-scoring candidate (first in sorted list).
+    if (candidates.length === 0) continue; // try the other colour next iteration
+    const chosen = candidates[0];
+    board[chosen.r][chosen.c] = colour;
+  }
+
+  // ── Tendril-growing pass (loopgen.c post-processing) ─────────────────────
+  // Flip any face that is adjacent to exactly one opposite-coloured face,
+  // if the flip is legal. Repeat until no more flips occur.
+  const faceOrder = _shuffle(Array.from({ length: N * N }, (_, i) => i));
+
+  let doRandomPass = false;
+  while (true) {
+    let flipped = false;
+    for (const idx of faceOrder) {
+      const r = (idx / N) | 0, c = idx % N;
+      const opp = (board[r][c] === WHITE) ? BLACK : WHITE;
+      if (!canColourCell(r, c, opp)) continue;
+      // canColourCell checks board[r][c]===GREY, but we're flipping a coloured
+      // cell. Temporarily set to GREY to use canColourCell.
+      const orig = board[r][c];
+      board[r][c] = GREY;
+      if (!canColourCell(r, c, opp)) { board[r][c] = orig; continue; }
+      if (doRandomPass) {
+        if (Math.random() < 0.1) board[r][c] = opp; else board[r][c] = orig;
+      } else {
+        if (numNeighboursOfColour(r, c, opp) === 1) {
+          board[r][c] = opp;
+          flipped = true;
+        } else {
+          board[r][c] = orig;
+        }
+      }
+    }
+    if (doRandomPass) break;
+    if (!flipped) doRandomPass = true;
+  }
+
+  // ── Convert face colouring to edge arrays ─────────────────────────────────
+  // An edge between two cells (or a cell and the exterior) is a doorway
+  // (EDGE_NONE / on the loop) iff the two faces have different colours.
+  // Otherwise it's a wall (EDGE_BLACK).
   const hS = Array.from({ length: N + 1 }, () => new Array(N).fill(EDGE_BLACK));
   const vS = Array.from({ length: N }, () => new Array(N + 1).fill(EDGE_BLACK));
 
-  for (let i = 0; i < cycle.length; i++) {
-    const [r0, c0] = cycle[i];
-    const [r1, c1] = cycle[(i + 1) % cycle.length];
-    if (r0 === r1) vS[r0][Math.min(c0, c1) + 1] = EDGE_NONE;  // vertical edge
-    else hS[Math.min(r0, r1) + 1][c0] = EDGE_NONE;  // horizontal edge
+  // Horizontal edges: hS[r][c] is between cell(r-1,c) and cell(r,c).
+  for (let r = 0; r <= N; r++) {
+    for (let c = 0; c < N; c++) {
+      const above = faceColour(r - 1, c);
+      const below = faceColour(r, c);
+      hS[r][c] = (above !== below) ? EDGE_NONE : EDGE_BLACK;
+    }
   }
+  // Vertical edges: vS[r][c] is between cell(r,c-1) and cell(r,c).
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c <= N; c++) {
+      const left = faceColour(r, c - 1);
+      const right = faceColour(r, c);
+      vS[r][c] = (left !== right) ? EDGE_NONE : EDGE_BLACK;
+    }
+  }
+
   return { hS, vS };
 }
+
+// ── Phase 2: Extract clues from solution ─────────────────────────────────────
 
 /**
  * Compute the clue at every interior vertex (r, c ∈ [1..N-1]).
@@ -489,14 +612,10 @@ function _removeRedundantClues(clueGrid, N) {
 function generatePuzzle(cells) {
   const N = cells;
 
-  // Phase 1 — random simple cycle
-  let cycle = null;
-  for (let attempt = 0; attempt < 5 && !cycle; attempt++)
-    cycle = findRandomCycle(N);
-  if (!cycle) throw new Error(`Could not find a loop for ${N}×${N}.`);
+  // Phase 1 — generate a random closed loop via face colouring.
+  const { hS, vS } = generateLoop(N);
 
   // Phase 2 — Solution edges + full clue set
-  const { hS, vS } = _cycleToSolution(cycle, N);
   const clueGrid = _extractAllClues(hS, vS, N);
 
   // Phase 3 — Remove redundant clues (Loopy's remove_clues)

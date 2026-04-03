@@ -22,13 +22,27 @@ let renderer = null;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
+function getClosedLoopSolutionCountUpTo2(s) {
+  if (s.openMode) return null;
+  const clueGrid = buildClueGridFromState(s);
+  return countSolutions(clueGrid, s.cells, 2);
+}
+
 function initPuzzle(name) {
   const { state: s, label } = loadPuzzle(name);
   state = s;
   renderer = renderer || new Renderer(canvas);
   renderer.resize(state.cells);
   redraw();
-  statusMsg.textContent = '';
+
+  // Loopy-style puzzle instances are expected to have exactly one solution.
+  const solCount = getClosedLoopSolutionCountUpTo2(state);
+  if (solCount !== null && solCount !== 1) {
+    statusMsg.textContent = 'This board is not a unique Loopy-style puzzle.';
+    statusMsg.style.color = '#cc2222';
+  } else {
+    statusMsg.textContent = '';
+  }
 }
 
 function redraw() {
@@ -137,6 +151,10 @@ btnGenerate.addEventListener('click', () => {
   requestAnimationFrame(() => {
     try {
       state = generatePuzzle(cells);
+      const solCount = getClosedLoopSolutionCountUpTo2(state);
+      if (solCount !== 1) {
+        throw new Error('Generator produced a non-unique board. Please generate again.');
+      }
       renderer = renderer || new Renderer(canvas);
       renderer.resize(cells);
       redraw();
@@ -157,9 +175,19 @@ function loadFromLoopyString(raw) {
     importError.textContent = result.error;
     return;
   }
-  state = new GameState(result.cells);
-  state.loadClues(result.clues);
-  if (result.entry && result.exit) state.setEntryExit(result.entry, result.exit);
+
+  const imported = new GameState(result.cells);
+  imported.loadClues(result.clues);
+  if (result.entry && result.exit) imported.setEntryExit(result.entry, result.exit);
+
+  // Enforce Loopy's uniqueness expectation for closed-loop imports.
+  const solCount = getClosedLoopSolutionCountUpTo2(imported);
+  if (solCount !== null && solCount !== 1) {
+    importError.textContent = 'Imported puzzle is not uniquely solvable.';
+    return;
+  }
+
+  state = imported;
   renderer.resize(result.cells);
   redraw();
   statusMsg.textContent = '';
