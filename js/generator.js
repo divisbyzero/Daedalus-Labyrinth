@@ -46,7 +46,7 @@ function _shuffle(arr) {
 function findRandomCycle(N) {
   const visited = Array.from({ length: N }, () => new Uint8Array(N));
   const path = [];
-  const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+  const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
   // Avoid tiny loops; encourage medium/large loops for better clue variety.
   const minLen = Math.max(4, Math.floor((N * N) * 0.35));
@@ -107,13 +107,13 @@ function findRandomCycle(N) {
  */
 function _cycleToSolution(cycle, N) {
   const hS = Array.from({ length: N + 1 }, () => new Array(N).fill(EDGE_BLACK));
-  const vS = Array.from({ length: N },     () => new Array(N + 1).fill(EDGE_BLACK));
+  const vS = Array.from({ length: N }, () => new Array(N + 1).fill(EDGE_BLACK));
 
   for (let i = 0; i < cycle.length; i++) {
     const [r0, c0] = cycle[i];
     const [r1, c1] = cycle[(i + 1) % cycle.length];
     if (r0 === r1) vS[r0][Math.min(c0, c1) + 1] = EDGE_NONE;  // vertical edge
-    else           hS[Math.min(r0, r1) + 1][c0]  = EDGE_NONE;  // horizontal edge
+    else hS[Math.min(r0, r1) + 1][c0] = EDGE_NONE;  // horizontal edge
   }
   return { hS, vS };
 }
@@ -136,9 +136,9 @@ function _extractAllClues(hS, vS, N) {
     for (let c = 1; c < N; c++) {
       let b = 0;
       if (hS[r][c - 1] === EDGE_BLACK) b++;
-      if (hS[r][c]     === EDGE_BLACK) b++;
+      if (hS[r][c] === EDGE_BLACK) b++;
       if (vS[r - 1][c] === EDGE_BLACK) b++;
-      if (vS[r][c]     === EDGE_BLACK) b++;
+      if (vS[r][c] === EDGE_BLACK) b++;
       cg[r][c] = b;
     }
   }
@@ -205,10 +205,10 @@ function countSolutions(clueGrid, N, limit) {
           const clue = clueGrid[r][c];
           if (clue === null) continue;
 
-          const L  = h[r][c - 1];   // left  horizontal edge
-          const R  = h[r][c];       // right horizontal edge
-          const U  = v[r - 1][c];   // above vertical edge
-          const D  = v[r][c];       // below vertical edge
+          const L = h[r][c - 1];   // left  horizontal edge
+          const R = h[r][c];       // right horizontal edge
+          const U = v[r - 1][c];   // above vertical edge
+          const D = v[r][c];       // below vertical edge
 
           let black = 0, gray = 0;
           if (L === EDGE_BLACK) black++; else if (L === EDGE_GRAY) gray++;
@@ -220,13 +220,13 @@ function countSolutions(clueGrid, N, limit) {
 
           if (gray > 0) {
             let fv = -1;
-            if (black === clue)           fv = EDGE_NONE;
+            if (black === clue) fv = EDGE_NONE;
             else if (black + gray === clue) fv = EDGE_BLACK;
             if (fv >= 0) {
               if (L === EDGE_GRAY) { h[r][c - 1] = fv; changed = true; }
-              if (R === EDGE_GRAY) { h[r][c]     = fv; changed = true; }
+              if (R === EDGE_GRAY) { h[r][c] = fv; changed = true; }
               if (U === EDGE_GRAY) { v[r - 1][c] = fv; changed = true; }
-              if (D === EDGE_GRAY) { v[r][c]     = fv; changed = true; }
+              if (D === EDGE_GRAY) { v[r][c] = fv; changed = true; }
             }
           }
         }
@@ -255,23 +255,23 @@ function countSolutions(clueGrid, N, limit) {
           if (gray > 0) {
             // Saturated loop cell: all remaining edges are walls.
             if (none === 2) {
-              if (T === EDGE_GRAY) { h[r][c]     = EDGE_BLACK; changed = true; }
+              if (T === EDGE_GRAY) { h[r][c] = EDGE_BLACK; changed = true; }
               if (B === EDGE_GRAY) { h[r + 1][c] = EDGE_BLACK; changed = true; }
-              if (L === EDGE_GRAY) { v[r][c]     = EDGE_BLACK; changed = true; }
+              if (L === EDGE_GRAY) { v[r][c] = EDGE_BLACK; changed = true; }
               if (R === EDGE_GRAY) { v[r][c + 1] = EDGE_BLACK; changed = true; }
             }
 
             // Degree parity forcing for near-complete local states.
             if (none === 1 && gray === 1) {
-              if (T === EDGE_GRAY) { h[r][c]     = EDGE_NONE; changed = true; }
+              if (T === EDGE_GRAY) { h[r][c] = EDGE_NONE; changed = true; }
               if (B === EDGE_GRAY) { h[r + 1][c] = EDGE_NONE; changed = true; }
-              if (L === EDGE_GRAY) { v[r][c]     = EDGE_NONE; changed = true; }
+              if (L === EDGE_GRAY) { v[r][c] = EDGE_NONE; changed = true; }
               if (R === EDGE_GRAY) { v[r][c + 1] = EDGE_NONE; changed = true; }
             }
             if (none === 0 && gray === 1) {
-              if (T === EDGE_GRAY) { h[r][c]     = EDGE_BLACK; changed = true; }
+              if (T === EDGE_GRAY) { h[r][c] = EDGE_BLACK; changed = true; }
               if (B === EDGE_GRAY) { h[r + 1][c] = EDGE_BLACK; changed = true; }
-              if (L === EDGE_GRAY) { v[r][c]     = EDGE_BLACK; changed = true; }
+              if (L === EDGE_GRAY) { v[r][c] = EDGE_BLACK; changed = true; }
               if (R === EDGE_GRAY) { v[r][c + 1] = EDGE_BLACK; changed = true; }
             }
           }
@@ -294,10 +294,10 @@ function countSolutions(clueGrid, N, limit) {
     for (let r = 0; r < N; r++) {
       for (let c = 0; c < N; c++) {
         const i = r * N + c;
-        if (r > 0   && h[r][c]     === EDGE_NONE) deg[i]++;
-        if (r < N-1 && h[r+1][c]   === EDGE_NONE) deg[i]++;
-        if (c > 0   && v[r][c]     === EDGE_NONE) deg[i]++;
-        if (c < N-1 && v[r][c+1]   === EDGE_NONE) deg[i]++;
+        if (r > 0 && h[r][c] === EDGE_NONE) deg[i]++;
+        if (r < N - 1 && h[r + 1][c] === EDGE_NONE) deg[i]++;
+        if (c > 0 && v[r][c] === EDGE_NONE) deg[i]++;
+        if (c < N - 1 && v[r][c + 1] === EDGE_NONE) deg[i]++;
       }
     }
 
@@ -310,10 +310,10 @@ function countSolutions(clueGrid, N, limit) {
         const u = stk.pop();
         nodes++;
         const r = (u / N) | 0, c = u % N;
-        if (r > 0   && h[r][c]     === EDGE_NONE) { edgeCount++; if (!vis[u-N]) { vis[u-N]=1; stk.push(u-N); } }
-        if (r < N-1 && h[r+1][c]   === EDGE_NONE) { edgeCount++; if (!vis[u+N]) { vis[u+N]=1; stk.push(u+N); } }
-        if (c > 0   && v[r][c]     === EDGE_NONE) { edgeCount++; if (!vis[u-1]) { vis[u-1]=1; stk.push(u-1); } }
-        if (c < N-1 && v[r][c+1]   === EDGE_NONE) { edgeCount++; if (!vis[u+1]) { vis[u+1]=1; stk.push(u+1); } }
+        if (r > 0 && h[r][c] === EDGE_NONE) { edgeCount++; if (!vis[u - N]) { vis[u - N] = 1; stk.push(u - N); } }
+        if (r < N - 1 && h[r + 1][c] === EDGE_NONE) { edgeCount++; if (!vis[u + N]) { vis[u + N] = 1; stk.push(u + N); } }
+        if (c > 0 && v[r][c] === EDGE_NONE) { edgeCount++; if (!vis[u - 1]) { vis[u - 1] = 1; stk.push(u - 1); } }
+        if (c < N - 1 && v[r][c + 1] === EDGE_NONE) { edgeCount++; if (!vis[u + 1]) { vis[u + 1] = 1; stk.push(u + 1); } }
       }
       edgeCount /= 2;
 
@@ -345,10 +345,10 @@ function countSolutions(clueGrid, N, limit) {
       for (let c = 0; c < N; c++) {
         const i = r * N + c;
         let n = 0;
-        if (r > 0   && h[r][c]       === EDGE_NONE) n++;
-        if (r < N-1 && h[r + 1][c]   === EDGE_NONE) n++;
-        if (c > 0   && v[r][c]       === EDGE_NONE) n++;
-        if (c < N-1 && v[r][c + 1]   === EDGE_NONE) n++;
+        if (r > 0 && h[r][c] === EDGE_NONE) n++;
+        if (r < N - 1 && h[r + 1][c] === EDGE_NONE) n++;
+        if (c > 0 && v[r][c] === EDGE_NONE) n++;
+        if (c < N - 1 && v[r][c + 1] === EDGE_NONE) n++;
         degree[i] = n;
         if (n !== 0 && n !== 2) return false;
         if (n === 2) active.push(i);
@@ -364,10 +364,10 @@ function countSolutions(clueGrid, N, limit) {
     let cnt = 1;
     while (q.length) {
       const i = q.pop(), r = (i / N) | 0, c = i % N;
-      if (r > 0   && h[r][c]     === EDGE_NONE && !vis[i-N]) { vis[i-N]=1; cnt++; q.push(i-N); }
-      if (r < N-1 && h[r+1][c]   === EDGE_NONE && !vis[i+N]) { vis[i+N]=1; cnt++; q.push(i+N); }
-      if (c > 0   && v[r][c]     === EDGE_NONE && !vis[i-1]) { vis[i-1]=1; cnt++; q.push(i-1); }
-      if (c < N-1 && v[r][c+1]   === EDGE_NONE && !vis[i+1]) { vis[i+1]=1; cnt++; q.push(i+1); }
+      if (r > 0 && h[r][c] === EDGE_NONE && !vis[i - N]) { vis[i - N] = 1; cnt++; q.push(i - N); }
+      if (r < N - 1 && h[r + 1][c] === EDGE_NONE && !vis[i + N]) { vis[i + N] = 1; cnt++; q.push(i + N); }
+      if (c > 0 && v[r][c] === EDGE_NONE && !vis[i - 1]) { vis[i - 1] = 1; cnt++; q.push(i - 1); }
+      if (c < N - 1 && v[r][c + 1] === EDGE_NONE && !vis[i + 1]) { vis[i + 1] = 1; cnt++; q.push(i + 1); }
     }
     return cnt === active.length;
   }
@@ -389,7 +389,7 @@ function countSolutions(clueGrid, N, limit) {
   function findGray() {
     for (let r = 1; r < N; r++)
       for (let c = 0; c < N; c++)
-        if (h[r][c] === EDGE_GRAY) return [true,  r, c];
+        if (h[r][c] === EDGE_GRAY) return [true, r, c];
     for (let r = 0; r < N; r++)
       for (let c = 1; c < N; c++)
         if (v[r][c] === EDGE_GRAY) return [false, r, c];
@@ -477,7 +477,7 @@ function generatePuzzle(cells) {
 
   // Phase 2 — Solution edges + full clue set
   const { hS, vS } = _cycleToSolution(cycle, N);
-  const clueGrid   = _extractAllClues(hS, vS, N);
+  const clueGrid = _extractAllClues(hS, vS, N);
 
   // Phase 3 — Remove redundant clues (Loopy's remove_clues)
   _removeRedundantClues(clueGrid, N);
