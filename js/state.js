@@ -323,8 +323,10 @@ class GameState {
    * are completely fine — only cycles in the cell-path graph are errors.
    */
   getErrorCellSet() {
-    // In closed mode: no errors if the puzzle is solved or all edges decided.
-    if (!this.openMode && (this.checkWin() || !this.hasGrayEdges())) return new Set();
+    // No errors if the puzzle is already solved.
+    if (this.checkWin()) return new Set();
+    // In closed mode with no gray edges left, also no errors.
+    if (!this.openMode && !this.hasGrayEdges()) return new Set();
 
     const C = this.cells;
     const { adj, N } = this._buildDoorwayGraph();

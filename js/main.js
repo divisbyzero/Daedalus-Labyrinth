@@ -23,9 +23,11 @@ let renderer = null;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
-function getClosedLoopSolutionCountUpTo2(s) {
-  if (s.openMode) return null;
+function getSolutionCountUpTo2(s) {
   const clueGrid = buildClueGridFromState(s);
+  if (s.openMode) {
+    return countSolutions(clueGrid, s.cells, 2, undefined, s.entry, s.exit);
+  }
   return countSolutions(clueGrid, s.cells, 2);
 }
 
@@ -37,8 +39,8 @@ function initPuzzle(name) {
   redraw();
 
   // Loopy-style puzzle instances are expected to have exactly one solution.
-  const solCount = getClosedLoopSolutionCountUpTo2(state);
-  if (solCount !== null && solCount !== 1) {
+  const solCount = getSolutionCountUpTo2(state);
+  if (solCount !== 1) {
     statusMsg.textContent = 'This board is not a unique Loopy-style puzzle.';
     statusMsg.style.color = '#cc2222';
   } else {
@@ -119,17 +121,13 @@ btnReset.addEventListener('click', () => {
 });
 
 btnShowSolution.addEventListener('click', () => {
-  if (state.openMode) {
-    statusMsg.textContent = 'Show solution currently supports closed-loop puzzles only.';
-    statusMsg.style.color = '#cc2222';
-    return;
-  }
-
   statusMsg.textContent = 'Solving…';
   statusMsg.style.color = '';
   requestAnimationFrame(() => {
     const clueGrid = buildClueGridFromState(state);
-    const solved = findOneSolution(clueGrid, state.cells);
+    const solved = state.openMode
+      ? findOneSolution(clueGrid, state.cells, state.entry, state.exit)
+      : findOneSolution(clueGrid, state.cells);
     if (!solved) {
       statusMsg.textContent = 'No solution found for current clues.';
       statusMsg.style.color = '#cc2222';
@@ -153,7 +151,7 @@ btnGenerate.addEventListener('click', () => {
   requestAnimationFrame(() => {
     try {
       state = generatePuzzle(cells, diff);
-      const solCount = getClosedLoopSolutionCountUpTo2(state);
+      const solCount = getSolutionCountUpTo2(state);
       if (solCount !== 1) {
         throw new Error('Generator produced a non-unique board. Please generate again.');
       }
@@ -182,9 +180,9 @@ function loadFromLoopyString(raw) {
   imported.loadClues(result.clues);
   if (result.entry && result.exit) imported.setEntryExit(result.entry, result.exit);
 
-  // Enforce Loopy's uniqueness expectation for closed-loop imports.
-  const solCount = getClosedLoopSolutionCountUpTo2(imported);
-  if (solCount !== null && solCount !== 1) {
+  // Enforce uniqueness expectation for imports.
+  const solCount = getSolutionCountUpTo2(imported);
+  if (solCount !== 1) {
     importError.textContent = 'Imported puzzle is not uniquely solvable.';
     return;
   }

@@ -35,6 +35,20 @@ function _shuffle(arr) {
   return arr;
 }
 
+/** Map a perimeter edge spec { isH, r, c } to the cell just inside the grid. */
+function _perimToCell(edge, N) {
+  if (!edge) return null;
+  const { isH, r, c } = edge;
+  if (isH) {
+    if (r === 0) return { r: 0, c };
+    if (r === N) return { r: N - 1, c };
+  } else {
+    if (c === 0) return { r, c: 0 };
+    if (c === N) return { r, c: N - 1 };
+  }
+  return null;
+}
+
 // ── Phase 1: Random loop generation via face colouring ────────────────────────
 
 /**
@@ -210,6 +224,60 @@ function generateLoop(N) {
 // ── Phase 2: Extract clues from solution ─────────────────────────────────────
 
 /**
+ * Convert a closed loop into an open path by breaking one doorway edge
+ * between two border cells and opening a perimeter wall for each endpoint.
+ *
+ * Mutates hS/vS in-place.  Returns { entry, exit } where each is
+ * { isH, r, c } identifying the opened perimeter edge, or null if no
+ * suitable break-point exists (caller should retry with a new loop).
+ */
+function _selectEntryExit(hS, vS, N) {
+  function isBorder(r, c) {
+    return r === 0 || r === N - 1 || c === 0 || c === N - 1;
+  }
+
+  // Find internal doorway edges where BOTH adjacent cells are border cells.
+  const candidates = [];
+
+  // Internal horizontal edges  h[r][c], r ∈ [1..N-1]
+  for (let r = 1; r < N; r++)
+    for (let c = 0; c < N; c++)
+      if (hS[r][c] === EDGE_NONE && isBorder(r - 1, c) && isBorder(r, c))
+        candidates.push({ isH: true, r, c, aR: r - 1, aC: c, bR: r, bC: c });
+
+  // Internal vertical edges  v[r][c], c ∈ [1..N-1]
+  for (let r = 0; r < N; r++)
+    for (let c = 1; c < N; c++)
+      if (vS[r][c] === EDGE_NONE && isBorder(r, c - 1) && isBorder(r, c))
+        candidates.push({ isH: false, r, c, aR: r, aC: c - 1, bR: r, bC: c });
+
+  if (candidates.length === 0) return null;
+
+  // Pick a random candidate.
+  const pick = candidates[(Math.random() * candidates.length) | 0];
+
+  // Break the doorway edge → converts the cycle into a path.
+  if (pick.isH) hS[pick.r][pick.c] = EDGE_BLACK;
+  else vS[pick.r][pick.c] = EDGE_BLACK;
+
+  // Open a perimeter wall adjacent to each endpoint cell.
+  function openPerim(cr, cc) {
+    const opts = [];
+    if (cr === 0) opts.push({ isH: true, r: 0, c: cc });
+    if (cr === N - 1) opts.push({ isH: true, r: N, c: cc });
+    if (cc === 0) opts.push({ isH: false, r: cr, c: 0 });
+    if (cc === N - 1) opts.push({ isH: false, r: cr, c: N });
+    const o = opts[(Math.random() * opts.length) | 0];
+    if (o.isH) hS[o.r][o.c] = EDGE_NONE; else vS[o.r][o.c] = EDGE_NONE;
+    return o;
+  }
+
+  const entry = openPerim(pick.aR, pick.aC);
+  const exit = openPerim(pick.bR, pick.bC);
+  return { entry, exit };
+}
+
+/**
  * Compute the clue at every interior vertex (r, c ∈ [1..N-1]).
  * Clue = number of BLACK (wall) adjacent edges.
  *
@@ -264,10 +332,11 @@ function _extractAllClues(hS, vS, N) {
  * When propagation reaches a fixed point with undecided edges remaining,
  * branch on the first gray edge and recurse.
  */
-function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
+function _countOrSolve(clueGrid, N, limit, captureFirst, diff, entry, exit) {
   if (limit === undefined) limit = 2;
   if (captureFirst === undefined) captureFirst = false;
   if (diff === undefined) diff = DIFF_HARD;
+  const isOpen = !!(entry && exit);
   let firstSolution = null;
 
   // ── Edge arrays ─────────────────────────────────────────────────────────────
@@ -283,6 +352,14 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
     row[0] = row[N] = EDGE_BLACK;
     return row;
   });
+
+  // Open entry/exit perimeter edges for open-mode puzzles.
+  if (isOpen) {
+    if (entry.isH) h[entry.r][entry.c] = EDGE_NONE;
+    else v[entry.r][entry.c] = EDGE_NONE;
+    if (exit.isH) h[exit.r][exit.c] = EDGE_NONE;
+    else v[exit.r][exit.c] = EDGE_NONE;
+  }
 
   // ── Constraint propagation ───────────────────────────────────────────────────
 
@@ -482,7 +559,10 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
       // In an undirected connected component, E>=V implies at least one cycle.
       const hasCycle = edgeCount >= nodes;
       if (hasCycle) cycleComponents++;
-      if (cycleComponents > 1) return false;
+      // Open mode: the solution is acyclic (a path), so any cycle is invalid.
+      // Closed mode: exactly one cycle is the solution; two or more is invalid.
+      if (isOpen && cycleComponents > 0) return false;
+      if (!isOpen && cycleComponents > 1) return false;
 
       // If we've closed a loop already, no other partial path component can
       // remain, because it can never connect into a degree-2 cycle.
@@ -534,6 +614,58 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
     return cnt === active.length;
   }
 
+  /**
+   * Open-mode solution check: the internal doorway graph must form a single
+   * simple path whose endpoints match the entry/exit cells.
+   * Entry/exit cells have internal degree 1; all others have degree 0 or 2.
+   */
+  function isValidOpenPath() {
+    const eC = _perimToCell(entry, N);
+    const xC = _perimToCell(exit, N);
+    if (!eC || !xC) return false;
+    const eIdx = eC.r * N + eC.c;
+    const xIdx = xC.r * N + xC.c;
+
+    const degree = new Uint8Array(N * N);
+    const active = [];
+
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const i = r * N + c;
+        let n = 0;
+        if (r > 0 && h[r][c] === EDGE_NONE) n++;
+        if (r < N - 1 && h[r + 1][c] === EDGE_NONE) n++;
+        if (c > 0 && v[r][c] === EDGE_NONE) n++;
+        if (c < N - 1 && v[r][c + 1] === EDGE_NONE) n++;
+        degree[i] = n;
+        if (n > 0) active.push(i);
+      }
+    }
+
+    if (active.length === 0) return false;
+
+    // Entry and exit cells must have internal degree 1.
+    if (degree[eIdx] !== 1 || degree[xIdx] !== 1) return false;
+
+    // All other active cells must have degree 2.
+    for (const i of active)
+      if (i !== eIdx && i !== xIdx && degree[i] !== 2) return false;
+
+    // All active cells must be in one connected component.
+    const vis = new Uint8Array(N * N);
+    const q = [active[0]];
+    vis[active[0]] = 1;
+    let cnt = 1;
+    while (q.length) {
+      const i = q.pop(), r = (i / N) | 0, c = i % N;
+      if (r > 0 && h[r][c] === EDGE_NONE && !vis[i - N]) { vis[i - N] = 1; cnt++; q.push(i - N); }
+      if (r < N - 1 && h[r + 1][c] === EDGE_NONE && !vis[i + N]) { vis[i + N] = 1; cnt++; q.push(i + N); }
+      if (c > 0 && v[r][c] === EDGE_NONE && !vis[i - 1]) { vis[i - 1] = 1; cnt++; q.push(i - 1); }
+      if (c < N - 1 && v[r][c + 1] === EDGE_NONE && !vis[i + 1]) { vis[i + 1] = 1; cnt++; q.push(i + 1); }
+    }
+    return cnt === active.length;
+  }
+
   // ── Backtracking search ──────────────────────────────────────────────────────
 
   // Save and restore h/v arrays in-place (no reference replacement, so outer
@@ -563,7 +695,9 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
 
     const gray = findGray();
     if (!gray) {
-      if (!isSingleLoopWithOptionalIsolatedCells()) return count;
+      const valid = isOpen ? isValidOpenPath()
+        : isSingleLoopWithOptionalIsolatedCells();
+      if (!valid) return count;
       if (captureFirst && !firstSolution) firstSolution = snap();
       return count + 1;
     }
@@ -592,12 +726,12 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
   return { count: search(0), solution: firstSolution };
 }
 
-function countSolutions(clueGrid, N, limit, diff) {
-  return _countOrSolve(clueGrid, N, limit, false, diff).count;
+function countSolutions(clueGrid, N, limit, diff, entry, exit) {
+  return _countOrSolve(clueGrid, N, limit, false, diff, entry, exit).count;
 }
 
-function hasUniqueSolution(clueGrid, N, diff) {
-  return countSolutions(clueGrid, N, 2, diff) === 1;
+function hasUniqueSolution(clueGrid, N, diff, entry, exit) {
+  return countSolutions(clueGrid, N, 2, diff, entry, exit) === 1;
 }
 
 /**
@@ -606,8 +740,8 @@ function hasUniqueSolution(clueGrid, N, diff) {
  * Return shape: { h, v } where h/v have the same indexing as the state's
  * hEdges/vEdges arrays.
  */
-function findOneSolution(clueGrid, N) {
-  return _countOrSolve(clueGrid, N, 1, true).solution;
+function findOneSolution(clueGrid, N, entry, exit) {
+  return _countOrSolve(clueGrid, N, 1, true, undefined, entry, exit).solution;
 }
 
 // ── Phase 3b: Greedy clue removal ─────────────────────────────────────────────
@@ -620,7 +754,7 @@ function findOneSolution(clueGrid, N) {
  *   shuffle the face list, then for each face tentatively remove its clue
  *   and call game_has_unique_soln(); restore if uniqueness is lost.
  */
-function _removeRedundantClues(clueGrid, N, diff) {
+function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
   const positions = [];
   for (let r = 1; r < N; r++)
     for (let c = 1; c < N; c++)
@@ -631,7 +765,7 @@ function _removeRedundantClues(clueGrid, N, diff) {
     if (clueGrid[r][c] === null) continue;
     const saved = clueGrid[r][c];
     clueGrid[r][c] = null;
-    if (!hasUniqueSolution(clueGrid, N, diff)) clueGrid[r][c] = saved;
+    if (!hasUniqueSolution(clueGrid, N, diff, entry, exit)) clueGrid[r][c] = saved;
   }
 }
 
@@ -643,6 +777,7 @@ function _removeRedundantClues(clueGrid, N, diff) {
  *
  * Pipeline (modelled on loopy.c new_game_desc()):
  *   1. Find a random simple cycle             → the solution path
+ *   1b. Break the cycle open at a border edge → entry/exit path
  *   2. Derive all vertex clues from it        → add_full_clues equivalent
  *   3. Remove redundant clues while unique    → remove_clues equivalent
  *   4. Reject if solvable at a lower diff     → Loopy's "too easy" check
@@ -659,19 +794,25 @@ function generatePuzzle(cells, diff) {
   for (let attempt = 0; ; attempt++) {
     if (attempt > 100) throw new Error('Could not generate a suitable board after many attempts.');
 
-    // Phase 1 + 2 — Generate a loop and extract full clue set.
+    // Phase 1 — Generate a closed loop.
     const { hS, vS } = generateLoop(N);
+
+    // Phase 1b — Break the loop open to create entry/exit.
+    const openResult = _selectEntryExit(hS, vS, N);
+    if (!openResult) continue;  // no suitable border-edge pair; retry
+    const { entry, exit } = openResult;
+
+    // Phase 2 — Extract clues from the modified (open-path) solution.
     const clueGrid = _extractAllClues(hS, vS, N);
 
     // Verify the full clue set is uniquely solvable at the target difficulty.
-    if (!hasUniqueSolution(clueGrid, N, diff)) continue;
+    if (!hasUniqueSolution(clueGrid, N, diff, entry, exit)) continue;
 
     // Phase 3 — Remove redundant clues (Loopy's remove_clues)
-    _removeRedundantClues(clueGrid, N, diff);
+    _removeRedundantClues(clueGrid, N, diff, entry, exit);
 
     // Phase 4 — Reject puzzles that are too easy (Loopy's "too easy" check).
-    // If diff > EASY and the puzzle is solvable at a lower difficulty, retry.
-    if (diff > DIFF_EASY && hasUniqueSolution(clueGrid, N, diff - 1)) continue;
+    if (diff > DIFF_EASY && hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
 
     // Build GameState
     const clues = [];
@@ -682,6 +823,7 @@ function generatePuzzle(cells, diff) {
 
     const state = new GameState(N);
     state.loadClues(clues);
+    state.setEntryExit(entry, exit);
     return state;
   }
 }

@@ -7,6 +7,10 @@
         "/^node test_gen\\.js$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^node test_open2\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
