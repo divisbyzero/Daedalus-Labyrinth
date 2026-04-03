@@ -264,9 +264,10 @@ function _extractAllClues(hS, vS, N) {
  * When propagation reaches a fixed point with undecided edges remaining,
  * branch on the first gray edge and recurse.
  */
-function _countOrSolve(clueGrid, N, limit, captureFirst) {
+function _countOrSolve(clueGrid, N, limit, captureFirst, diff) {
   if (limit === undefined) limit = 2;
   if (captureFirst === undefined) captureFirst = false;
+  if (diff === undefined) diff = DIFF_HARD;
   let firstSolution = null;
 
   // ── Edge arrays ─────────────────────────────────────────────────────────────
@@ -368,6 +369,74 @@ function _countOrSolve(clueGrid, N, limit, captureFirst) {
               if (R === EDGE_GRAY) { v[r][c + 1] = EDGE_BLACK; changed = true; }
             }
           }
+        }
+      }
+
+      // Rule 3a (DIFF_NORMAL+): Premature cycle prevention.
+      // If setting a GRAY edge to NONE would create a closed cycle that
+      // doesn't include all currently-active cells, force it to BLACK.
+      // Once a cycle is sealed (all members at degree 2), no new cells
+      // can join, so any stranded active cells would form separate loops.
+      if (diff >= DIFF_NORMAL) {
+        const par = new Int32Array(N * N);
+        const rnk = new Uint8Array(N * N);
+        const csz = new Int32Array(N * N);
+        for (let i = 0; i < N * N; i++) { par[i] = i; csz[i] = 1; }
+        const uf_find = (x) => {
+          while (par[x] !== x) { par[x] = par[par[x]]; x = par[x]; }
+          return x;
+        };
+        const uf_unite = (a, b) => {
+          a = uf_find(a); b = uf_find(b);
+          if (a === b) return;
+          if (rnk[a] < rnk[b]) { const t = a; a = b; b = t; }
+          par[b] = a; csz[a] += csz[b];
+          if (rnk[a] === rnk[b]) rnk[a]++;
+        };
+
+        // Build Union-Find from current NONE edges.
+        for (let r2 = 1; r2 < N; r2++)
+          for (let c2 = 0; c2 < N; c2++)
+            if (h[r2][c2] === EDGE_NONE)
+              uf_unite((r2 - 1) * N + c2, r2 * N + c2);
+        for (let r2 = 0; r2 < N; r2++)
+          for (let c2 = 1; c2 < N; c2++)
+            if (v[r2][c2] === EDGE_NONE)
+              uf_unite(r2 * N + (c2 - 1), r2 * N + c2);
+
+        // Count active cells (those with at least one NONE edge).
+        let totalActive = 0;
+        for (let r2 = 0; r2 < N; r2++)
+          for (let c2 = 0; c2 < N; c2++) {
+            let deg = 0;
+            if (r2 > 0 && h[r2][c2] === EDGE_NONE) deg++;
+            if (r2 < N - 1 && h[r2 + 1][c2] === EDGE_NONE) deg++;
+            if (c2 > 0 && v[r2][c2] === EDGE_NONE) deg++;
+            if (c2 < N - 1 && v[r2][c2 + 1] === EDGE_NONE) deg++;
+            if (deg > 0) totalActive++;
+          }
+
+        if (totalActive > 0) {
+          // Check horizontal GRAY edges.
+          for (let r2 = 1; r2 < N; r2++)
+            for (let c2 = 0; c2 < N; c2++) {
+              if (h[r2][c2] !== EDGE_GRAY) continue;
+              const A = (r2 - 1) * N + c2, B = r2 * N + c2;
+              if (uf_find(A) === uf_find(B) &&
+                csz[uf_find(A)] < totalActive) {
+                h[r2][c2] = EDGE_BLACK; changed = true;
+              }
+            }
+          // Check vertical GRAY edges.
+          for (let r2 = 0; r2 < N; r2++)
+            for (let c2 = 1; c2 < N; c2++) {
+              if (v[r2][c2] !== EDGE_GRAY) continue;
+              const A = r2 * N + (c2 - 1), B = r2 * N + c2;
+              if (uf_find(A) === uf_find(B) &&
+                csz[uf_find(A)] < totalActive) {
+                v[r2][c2] = EDGE_BLACK; changed = true;
+              }
+            }
         }
       }
     }
@@ -499,6 +568,10 @@ function _countOrSolve(clueGrid, N, limit, captureFirst) {
       return count + 1;
     }
 
+    // At EASY and NORMAL difficulty, no backtracking — if propagation
+    // can't resolve all edges, the puzzle is considered ambiguous.
+    if (diff < DIFF_HARD) return count;
+
     const [isH, r, c] = gray;
     const s = snap();
 
@@ -519,12 +592,12 @@ function _countOrSolve(clueGrid, N, limit, captureFirst) {
   return { count: search(0), solution: firstSolution };
 }
 
-function countSolutions(clueGrid, N, limit) {
-  return _countOrSolve(clueGrid, N, limit, false).count;
+function countSolutions(clueGrid, N, limit, diff) {
+  return _countOrSolve(clueGrid, N, limit, false, diff).count;
 }
 
-function hasUniqueSolution(clueGrid, N) {
-  return countSolutions(clueGrid, N, 2) === 1;
+function hasUniqueSolution(clueGrid, N, diff) {
+  return countSolutions(clueGrid, N, 2, diff) === 1;
 }
 
 /**
@@ -547,7 +620,7 @@ function findOneSolution(clueGrid, N) {
  *   shuffle the face list, then for each face tentatively remove its clue
  *   and call game_has_unique_soln(); restore if uniqueness is lost.
  */
-function _removeRedundantClues(clueGrid, N) {
+function _removeRedundantClues(clueGrid, N, diff) {
   const positions = [];
   for (let r = 1; r < N; r++)
     for (let c = 1; c < N; c++)
@@ -558,50 +631,57 @@ function _removeRedundantClues(clueGrid, N) {
     if (clueGrid[r][c] === null) continue;
     const saved = clueGrid[r][c];
     clueGrid[r][c] = null;
-    if (!hasUniqueSolution(clueGrid, N)) clueGrid[r][c] = saved;
+    if (!hasUniqueSolution(clueGrid, N, diff)) clueGrid[r][c] = saved;
   }
 }
 
 // ── Full pipeline ──────────────────────────────────────────────────────────────
 
 /**
- * Generate a random DL puzzle with `cells` cells per side.
+ * Generate a random DL puzzle with `cells` cells per side at the given
+ * difficulty level.
  *
  * Pipeline (modelled on loopy.c new_game_desc()):
  *   1. Find a random simple cycle             → the solution path
  *   2. Derive all vertex clues from it        → add_full_clues equivalent
  *   3. Remove redundant clues while unique    → remove_clues equivalent
- *   4. Build and return a GameState with the minimal clue set loaded.
+ *   4. Reject if solvable at a lower diff     → Loopy's "too easy" check
+ *   5. Build and return a GameState with the minimal clue set loaded.
  *
  * Returns a configured GameState; all internal edges start as EDGE_GRAY
  * (undecided) — the player must deduce the solution.
  * Throws on the rare failure to find a cycle.
  */
-function generatePuzzle(cells) {
+function generatePuzzle(cells, diff) {
+  if (diff === undefined) diff = DIFF_HARD;
   const N = cells;
 
-  // Phase 1 + 2 — Generate a loop and extract full clue set.
-  // Like Loopy's new_game_desc(), retry if the full clue set doesn't
-  // yield a unique solution (rare, mainly on very small grids).
-  let hS, vS, clueGrid;
   for (let attempt = 0; ; attempt++) {
-    if (attempt > 100) throw new Error('Could not generate a unique board after many attempts.');
-    ({ hS, vS } = generateLoop(N));
-    clueGrid = _extractAllClues(hS, vS, N);
-    if (hasUniqueSolution(clueGrid, N)) break;
+    if (attempt > 100) throw new Error('Could not generate a suitable board after many attempts.');
+
+    // Phase 1 + 2 — Generate a loop and extract full clue set.
+    const { hS, vS } = generateLoop(N);
+    const clueGrid = _extractAllClues(hS, vS, N);
+
+    // Verify the full clue set is uniquely solvable at the target difficulty.
+    if (!hasUniqueSolution(clueGrid, N, diff)) continue;
+
+    // Phase 3 — Remove redundant clues (Loopy's remove_clues)
+    _removeRedundantClues(clueGrid, N, diff);
+
+    // Phase 4 — Reject puzzles that are too easy (Loopy's "too easy" check).
+    // If diff > EASY and the puzzle is solvable at a lower difficulty, retry.
+    if (diff > DIFF_EASY && hasUniqueSolution(clueGrid, N, diff - 1)) continue;
+
+    // Build GameState
+    const clues = [];
+    for (let r = 1; r < N; r++)
+      for (let c = 1; c < N; c++)
+        if (clueGrid[r][c] !== null)
+          clues.push({ r, c, value: clueGrid[r][c] });
+
+    const state = new GameState(N);
+    state.loadClues(clues);
+    return state;
   }
-
-  // Phase 3 — Remove redundant clues (Loopy's remove_clues)
-  _removeRedundantClues(clueGrid, N);
-
-  // Build GameState
-  const clues = [];
-  for (let r = 1; r < N; r++)
-    for (let c = 1; c < N; c++)
-      if (clueGrid[r][c] !== null)
-        clues.push({ r, c, value: clueGrid[r][c] });
-
-  const state = new GameState(N);
-  state.loadClues(clues);
-  return state;
 }

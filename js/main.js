@@ -13,6 +13,7 @@ const loopyInput = document.getElementById('loopyInput');
 const btnLoad = document.getElementById('btnLoad');
 const importError = document.getElementById('importError');
 const genSize = document.getElementById('genSize');
+const genDiff = document.getElementById('genDiff');
 const btnGenerate = document.getElementById('btnGenerate');
 
 // ── App state ─────────────────────────────────────────────────────────────────
@@ -145,12 +146,13 @@ puzzleSelect.addEventListener('change', () => initPuzzle(puzzleSelect.value));
 
 btnGenerate.addEventListener('click', () => {
   const cells = parseInt(genSize.value, 10);
+  const diff = parseInt(genDiff.value, 10);
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';
   // Defer one frame so the browser can repaint the status before the DFS runs.
   requestAnimationFrame(() => {
     try {
-      state = generatePuzzle(cells);
+      state = generatePuzzle(cells, diff);
       const solCount = getClosedLoopSolutionCountUpTo2(state);
       if (solCount !== 1) {
         throw new Error('Generator produced a non-unique board. Please generate again.');
