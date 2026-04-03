@@ -119,9 +119,47 @@ class Renderer {
         this._drawVertex(ctx, state, r, c);
       }
     }
+
+    // 5. "Solved!" overlay — drawn last so it appears above everything
+    if (state.checkWin()) {
+      this._drawSolvedOverlay(ctx, C);
+    }
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
+
+  _drawSolvedOverlay(ctx, C) {
+    const cx = THEME.margin + C * THEME.cellSize / 2;
+    const cy = THEME.margin + C * THEME.cellSize / 2;
+    const fontSize = Math.round(THEME.cellSize * 0.9);
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    const text = 'Solved!';
+    const textW = ctx.measureText(text).width;
+    const padX = fontSize * 0.6;
+    const padY = fontSize * 0.4;
+    const bw = textW + padX * 2;
+    const bh = fontSize + padY * 2;
+    const bx = cx - bw / 2;
+    const by = cy - bh / 2;
+    const r = bh / 2;
+
+    // Pill background
+    ctx.beginPath();
+    ctx.moveTo(bx + r, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + bh, r);
+    ctx.arcTo(bx + bw, by + bh, bx, by + bh, r);
+    ctx.arcTo(bx, by + bh, bx, by, r);
+    ctx.arcTo(bx, by, bx + bw, by, r);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(242, 237, 228, 0.93)';
+    ctx.fill();
+
+    // Text
+    ctx.fillStyle = THEME.edgeBlack;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, cx, cy);
+  }
 
   /**
    * Draw a filled semicircle (archway) extending outward from an entry/exit

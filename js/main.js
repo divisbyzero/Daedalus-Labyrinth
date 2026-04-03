@@ -34,19 +34,9 @@ function redraw() {
 }
 
 function updateStatus() {
-  if (state.checkWin()) {
-    statusMsg.textContent = 'Solved!';
-    statusMsg.style.color = '#3A6B4F';
-    statusMsg.style.background = 'rgba(58, 107, 79, 0.15)';
-  } else if (state.getErrorCellSet().size > 0) {
-    statusMsg.textContent = 'Loop in labyrinth path — fix it';
-    statusMsg.style.color = '#C47058';
-    statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
-  } else {
-    statusMsg.textContent = '';
-    statusMsg.style.color = '';
-    statusMsg.style.background = '';
-  }
+  statusMsg.textContent = '';
+  statusMsg.style.color = '';
+  statusMsg.style.background = '';
 }
 
 function updateButtons() {
