@@ -10,39 +10,41 @@ const THEME = {
   hitTolerance: 14,     // edge click detection radius (px)
 
   // Vertex sizes
-  vertexRadiusNumbered: 11, // radius of numbered (clue) vertices
-  vertexRadiusPlain: 7,   // radius of plain (no-clue) vertices
+  vertexRadiusNumbered: 10, // radius of numbered (clue) vertices (~10% smaller)
+  vertexRadiusPlain: 8,   // radius of plain (no-clue) vertices (~20% smaller than numbered)
 
   // Edge widths
   edgeWidthBlack: 5,    // wall edge width
   edgeWidthGray: 1.5,    // undecided edge width
 
   // Colors — canvas
-  background: '#c8c8c8',
+  background: '#9CA38F',  // muted sage
 
   // Colors — cells
-  cellUndetermined: '#f8f8f8',
-  cellPath: '#e1d5bd',
-  cellEnclosed: '#446e53',
-  cellThreeSides: '#9a9a9a',
-  cellError: '#ee3333',
+  cellUndetermined: '#E8DCC8',  // warm packed-earth sand
+  cellPath: '#E8DCC8',          // warm packed-earth sand (same as undetermined)
+  cellEnclosed: '#2D5A3F',      // darker botanical green (impassable / tree)
+  cellThreeSides: '#B8AFA0',    // warm mid-tone gray
+  cellError: 'rgba(196, 112, 88, 0.65)', // dusty terracotta, semi-transparent overlay
 
   // Colors — edges
-  edgeBlack: '#1a472a',
-  edgeGray: '#969696',
+  edgeBlack: '#3A6B4F',   // warm botanical green (hedge)
+  edgeGray: '#B8AFA0',    // warm mid-tone gray (guide gridline)
+  edgeHover: '#4A7D60',   // lighter green for hover feedback
 
   // Colors — numbered vertices
-  vertexProgress: '#111111',  // clue not yet met
-  vertexSatisfied: '#1a472a', // clue exactly met
-  vertexViolated: '#cc2222',  // clue impossible / exceeded
+  vertexProgress: '#3A6B4F',   // clue not yet met
+  vertexSatisfied: '#3A6B4F',  // clue exactly met
+  vertexViolated: '#A85A40',   // deeper terracotta — clue impossible / exceeded
   vertexRing: 'rgba(255,255,255,0)',
   vertexText: '#ffffff',
 
   // Colors — plain vertices
-  vertexPlain: '#1a472a',
+  vertexPlain: '#3A6B4F',  // match hedge green
 
   // Entry/exit spill
   portalSpill: 16,      // how far the path color extends outside the grid
+  portalColor: '#E8D5A3', // pale gold — exit gaps stand out from path
 };
 
 /**
@@ -80,7 +82,7 @@ class Renderer {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
-  render(state) {
+  render(state, hoveredEdge = null) {
     const { ctx } = this;
     const C = state.cells;
     const W = THEME.margin * 2 + C * THEME.cellSize;
@@ -89,18 +91,22 @@ class Renderer {
     ctx.fillStyle = THEME.background;
     ctx.fillRect(0, 0, W, W);
 
-    // 1. Cell fills — premature-loop cells override their normal color to red.
+    // 1. Cell fills — error cells get a semi-transparent terracotta overlay on
+    //    top of their normal color so grid structure remains visible.
     const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        const color = errorCells.has(`${r},${c}`) ? CELL.ERROR : state.getCellColor(r, c);
-        ctx.fillStyle = this._cellFill(color);
+        ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
         ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
+        if (errorCells.has(`${r},${c}`)) {
+          ctx.fillStyle = THEME.cellError;
+          ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
+        }
       }
     }
 
     // 2. Edges
-    this._drawAllEdges(state, EDGE_GRAY);
+    this._drawAllEdges(state, EDGE_GRAY, hoveredEdge);
     this._drawAllEdges(state, EDGE_BLACK);
 
     // 3. Entry / exit path spill (below vertices)
@@ -130,7 +136,7 @@ class Renderer {
     const S = THEME.cellSize;
     const spill = THEME.portalSpill;
 
-    ctx.fillStyle = THEME.cellPath;
+    ctx.fillStyle = THEME.portalColor;
 
     if (isH) {
       // Horizontal edge — gap runs left-right along a top/bottom row.
@@ -165,7 +171,7 @@ class Renderer {
     }
   }
 
-  _drawAllEdges(state, targetState) {
+  _drawAllEdges(state, targetState, hoveredEdge = null) {
     const { ctx } = this;
     const C = state.cells;
 
@@ -193,6 +199,30 @@ class Renderer {
         ctx.lineTo(this.vx(c), this.vy(r + 1));
       }
     ctx.stroke();
+
+    // Draw hover highlight during the GRAY pass, for non-fixed non-BLACK edges.
+    if (hoveredEdge && targetState === EDGE_GRAY) {
+      const { isH, r, c } = hoveredEdge;
+      // Skip fixed boundary edges (they can't be toggled).
+      const isFixed = isH ? (r === 0 || r === C) : (c === 0 || c === C);
+      if (!isFixed) {
+        const edgeState = isH ? state.hEdges[r][c] : state.vEdges[r][c];
+        if (edgeState !== EDGE_BLACK) {
+          ctx.strokeStyle = THEME.edgeHover;
+          ctx.lineWidth = THEME.edgeWidthBlack;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          if (isH) {
+            ctx.moveTo(this.vx(c), this.vy(r));
+            ctx.lineTo(this.vx(c + 1), this.vy(r));
+          } else {
+            ctx.moveTo(this.vx(c), this.vy(r));
+            ctx.lineTo(this.vx(c), this.vy(r + 1));
+          }
+          ctx.stroke();
+        }
+      }
+    }
   }
 
   _drawVertex(ctx, state, r, c) {

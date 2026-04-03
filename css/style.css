@@ -8,7 +8,7 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: #d0d0d0;
+  background: #9CA38F;  /* muted sage */
   color: #111;
   min-height: 100vh;
   display: flex;

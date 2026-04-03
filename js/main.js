@@ -16,6 +16,7 @@ const btnGenerate = document.getElementById('btnGenerate');
 
 let state = null;
 let renderer = null;
+let hoveredEdge = null;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ function getSolutionCountUpTo2(s) {
 }
 
 function redraw() {
-  renderer.render(state);
+  renderer.render(state, hoveredEdge);
   updateButtons();
   updateStatus();
 }
@@ -36,10 +37,10 @@ function redraw() {
 function updateStatus() {
   if (state.checkWin()) {
     statusMsg.textContent = 'Solved!';
-    statusMsg.style.color = '#228833';
+    statusMsg.style.color = '#3A6B4F';
   } else if (state.getErrorCellSet().size > 0) {
     statusMsg.textContent = 'Loop in labyrinth path — fix it';
-    statusMsg.style.color = '#cc2222';
+    statusMsg.style.color = '#A85A40';
   } else {
     statusMsg.textContent = '';
     statusMsg.style.color = '';
@@ -89,6 +90,27 @@ canvas.addEventListener('mousedown', (e) => {
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+canvas.addEventListener('mousemove', (e) => {
+  if (!state || !renderer) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.offsetWidth / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.offsetHeight / rect.height);
+  const edge = renderer.findEdge(mx, my, state);
+  const key = edge ? `${edge.isH},${edge.r},${edge.c}` : null;
+  const prevKey = hoveredEdge ? `${hoveredEdge.isH},${hoveredEdge.r},${hoveredEdge.c}` : null;
+  if (key !== prevKey) {
+    hoveredEdge = edge;
+    redraw();
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (hoveredEdge !== null) {
+    hoveredEdge = null;
+    redraw();
+  }
+});
+
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
 btnUndo.addEventListener('click', () => { state.undo(); redraw(); });
@@ -109,7 +131,7 @@ btnShowSolution.addEventListener('click', () => {
       : findOneSolution(clueGrid, state.cells);
     if (!solved) {
       statusMsg.textContent = 'No solution found for current clues.';
-      statusMsg.style.color = '#cc2222';
+      statusMsg.style.color = '#A85A40';
       return;
     }
     applySolvedEdgesToState(state, solved);
@@ -137,7 +159,7 @@ function doGenerate() {
       statusMsg.textContent = '';
     } catch (err) {
       statusMsg.textContent = err.message;
-      statusMsg.style.color = '#cc2222';
+      statusMsg.style.color = '#A85A40';
     }
   });
 }
