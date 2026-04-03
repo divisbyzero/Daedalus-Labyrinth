@@ -173,8 +173,10 @@ function _extractAllClues(hS, vS, N) {
  * When propagation reaches a fixed point with undecided edges remaining,
  * branch on the first gray edge and recurse.
  */
-function countSolutions(clueGrid, N, limit) {
+function _countOrSolve(clueGrid, N, limit, captureFirst) {
   if (limit === undefined) limit = 2;
+  if (captureFirst === undefined) captureFirst = false;
+  let firstSolution = null;
 
   // ── Edge arrays ─────────────────────────────────────────────────────────────
   // h[r][c]: horizontal edge at vertex-row r, vertex-col c to c+1.
@@ -400,7 +402,11 @@ function countSolutions(clueGrid, N, limit) {
     if (!propagate()) return count;
 
     const gray = findGray();
-    if (!gray) return isSingleLoopWithOptionalIsolatedCells() ? count + 1 : count;
+    if (!gray) {
+      if (!isSingleLoopWithOptionalIsolatedCells()) return count;
+      if (captureFirst && !firstSolution) firstSolution = snap();
+      return count + 1;
+    }
 
     const [isH, r, c] = gray;
     const s = snap();
@@ -419,11 +425,25 @@ function countSolutions(clueGrid, N, limit) {
     return count;
   }
 
-  return search(0);
+  return { count: search(0), solution: firstSolution };
+}
+
+function countSolutions(clueGrid, N, limit) {
+  return _countOrSolve(clueGrid, N, limit, false).count;
 }
 
 function hasUniqueSolution(clueGrid, N) {
   return countSolutions(clueGrid, N, 2) === 1;
+}
+
+/**
+ * Return one solved edge assignment for this clue grid, or null if unsolved.
+ *
+ * Return shape: { h, v } where h/v have the same indexing as the state's
+ * hEdges/vEdges arrays.
+ */
+function findOneSolution(clueGrid, N) {
+  return _countOrSolve(clueGrid, N, 1, true).solution;
 }
 
 // ── Phase 3b: Greedy clue removal ─────────────────────────────────────────────

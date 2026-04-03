@@ -6,6 +6,7 @@ const canvas        = document.getElementById('gameCanvas');
 const btnUndo       = document.getElementById('btnUndo');
 const btnRedo       = document.getElementById('btnRedo');
 const btnReset      = document.getElementById('btnReset');
+const btnShowSolution = document.getElementById('btnShowSolution');
 const puzzleSelect  = document.getElementById('puzzleSelect');
 const statusMsg     = document.getElementById('statusMsg');
 const loopyInput    = document.getElementById('loopyInput');
@@ -54,6 +55,25 @@ function updateButtons() {
   btnRedo.disabled = !state.canRedo;
 }
 
+function buildClueGridFromState(s) {
+  const N = s.cells;
+  const cg = Array.from({ length: N + 1 }, () => new Array(N + 1).fill(null));
+  for (let r = 1; r < N; r++) {
+    for (let c = 1; c < N; c++) {
+      const v = s.clues[r][c];
+      if (v !== null && v !== undefined) cg[r][c] = v;
+    }
+  }
+  return cg;
+}
+
+function applySolvedEdgesToState(s, solved) {
+  s.hEdges = solved.h.map((row) => row.slice());
+  s.vEdges = solved.v.map((row) => row.slice());
+  s._undoStack = [];
+  s._redoStack = [];
+}
+
 // ── Mouse input ───────────────────────────────────────────────────────────────
 
 canvas.addEventListener('mousedown', (e) => {
@@ -81,6 +101,28 @@ btnReset.addEventListener('click', () => {
   // reset() preserves clues and re-opens entry/exit automatically.
   state.reset();
   redraw();
+});
+
+btnShowSolution.addEventListener('click', () => {
+  if (state.openMode) {
+    statusMsg.textContent = 'Show solution currently supports closed-loop puzzles only.';
+    statusMsg.style.color = '#cc2222';
+    return;
+  }
+
+  statusMsg.textContent = 'Solving…';
+  statusMsg.style.color = '';
+  requestAnimationFrame(() => {
+    const clueGrid = buildClueGridFromState(state);
+    const solved = findOneSolution(clueGrid, state.cells);
+    if (!solved) {
+      statusMsg.textContent = 'No solution found for current clues.';
+      statusMsg.style.color = '#cc2222';
+      return;
+    }
+    applySolvedEdgesToState(state, solved);
+    redraw();
+  });
 });
 
 puzzleSelect.addEventListener('change', () => initPuzzle(puzzleSelect.value));
