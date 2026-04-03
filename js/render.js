@@ -18,7 +18,7 @@ class Renderer {
     this.VRAD_NUM = 11; // numbered vertex radius
     this.VRAD_PLAIN = 7; // unnumbered vertex radius
     this.EDGE_W_BLACK = 5; // black (wall) edge width
-    this.EDGE_W_GRAY = 2;  // gray (undecided) edge width
+    this.EDGE_W_GRAY = 1.5;  // gray (undecided) edge width
     this.EHIT = 14;   // hit-detection tolerance in px
   }
 
@@ -81,9 +81,9 @@ class Renderer {
 
   _cellFill(color) {
     switch (color) {
-      case CELL.ENCLOSED: return '#1a472a';
+      case CELL.ENCLOSED: return '#446e53';
       case CELL.THREESIDES: return '#9a9a9a';
-      case CELL.PATH: return '#b8e6a0';
+      case CELL.PATH: return '#cabca0';
       case CELL.ERROR: return '#ee3333';
       default: return '#f8f8f8';
     }
@@ -98,7 +98,7 @@ class Renderer {
       ctx.lineWidth = this.EDGE_W_BLACK;
       ctx.lineCap = 'round';
     } else {
-      ctx.strokeStyle = '#b0b0b0';
+      ctx.strokeStyle = '#575757';
       ctx.lineWidth = this.EDGE_W_GRAY;
       ctx.lineCap = 'butt';
     }
@@ -154,7 +154,7 @@ class Renderer {
       // White ring so it reads clearly against any cell color
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.strokeStyle = 'rgba(255,255,255,0)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
