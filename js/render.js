@@ -15,7 +15,10 @@ class Renderer {
 
     this.CELL = 60;   // logical pixels per cell
     this.MARGIN = 36;   // padding around the grid
-    this.VRAD = 7;    // vertex dot radius
+    this.VRAD_NUM = 11; // numbered vertex radius
+    this.VRAD_PLAIN = 7; // unnumbered vertex radius
+    this.EDGE_W_BLACK = 5; // black (wall) edge width
+    this.EDGE_W_GRAY = 2;  // gray (undecided) edge width
     this.EHIT = 14;   // hit-detection tolerance in px
   }
 
@@ -92,11 +95,11 @@ class Renderer {
 
     if (targetState === EDGE_BLACK) {
       ctx.strokeStyle = '#1a472a';
-      ctx.lineWidth = 4.5;
+      ctx.lineWidth = this.EDGE_W_BLACK;
       ctx.lineCap = 'round';
     } else {
       ctx.strokeStyle = '#b0b0b0';
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = this.EDGE_W_GRAY;
       ctx.lineCap = 'butt';
     }
 
@@ -142,7 +145,7 @@ class Renderer {
         fill = '#111111'; // in progress — black
       }
 
-      const R = this.VRAD + 4;
+      const R = this.VRAD_NUM;
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
       ctx.fillStyle = fill;
@@ -156,13 +159,13 @@ class Renderer {
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.round(this.VRAD * 2.2)}px sans-serif`;
+      ctx.font = `bold ${Math.round(this.VRAD_NUM * 1.4)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(info.clue), x, y);
     } else {
-      // Plain vertex dot — same size as numbered vertices
-      const R = this.VRAD + 4;
+      // Plain vertex dot
+      const R = this.VRAD_PLAIN;
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
       ctx.fillStyle = '#1a472a';
