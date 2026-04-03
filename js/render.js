@@ -152,7 +152,7 @@ class Renderer {
       if (c === 0) {
         // Left border — dome extends leftward
         cx = this.vx(0);
-        startAngle = Math.PI / 2; endAngle = -Math.PI / 2; anticlockwise = true;
+        startAngle = Math.PI / 2; endAngle = -Math.PI / 2; anticlockwise = false;
       } else {
         // Right border — dome extends rightward
         cx = this.vx(C);
@@ -166,14 +166,6 @@ class Renderer {
     ctx.closePath();
     ctx.fillStyle = THEME.portalColor;
     ctx.fill();
-
-    // Stroke only the curved arc edge (no closePath → no flat-edge line)
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad, startAngle, endAngle, anticlockwise);
-    ctx.strokeStyle = THEME.edgeBlack;
-    ctx.lineWidth = THEME.edgeWidthBlack;
-    ctx.lineCap = 'butt';
-    ctx.stroke();
   }
 
   _cellFill(color) {
