@@ -32,6 +32,11 @@ class GameState {
     this.clues = Array.from({ length: this.V }, () =>
       new Array(this.V).fill(null));
 
+    // Entry / exit — each is { isH, r, c } identifying a perimeter edge,
+    // or null for closed-labyrinth mode.
+    this.entry = null;
+    this.exit  = null;
+
     // Undo / redo stacks — each entry: { isH, r, c, from, to }
     this._undoStack = [];
     this._redoStack = [];
@@ -49,6 +54,49 @@ class GameState {
       this.vEdges[r][0] = EDGE_BLACK;
       this.vEdges[r][C] = EDGE_BLACK;
     }
+    // Re-open entry/exit if already set (called by reset()).
+    if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_NONE);
+    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_NONE);
+  }
+
+  /**
+   * Set the entry and exit perimeter edges.
+   * Pass null for both to switch back to closed-labyrinth mode.
+   * Each argument is { isH, r, c } identifying a perimeter edge.
+   */
+  setEntryExit(entry, exit) {
+    // Seal any previously-open entry/exit back to black.
+    if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_BLACK);
+    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_BLACK);
+    this.entry = entry;
+    this.exit  = exit;
+    // Open the new ones.
+    if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_NONE);
+    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_NONE);
+  }
+
+  /** True if the puzzle uses entrance/exit mode rather than closed-loop mode. */
+  get openMode() { return this.entry !== null && this.exit !== null; }
+
+  /**
+   * Given a perimeter edge spec, return the cell immediately inside the board.
+   * Top border   (r=0):    adjacent cell is (0, c)
+   * Bottom border (r=C):   adjacent cell is (C-1, c)
+   * Left border  (c=0):    adjacent cell is (r, 0)
+   * Right border (c=C):    adjacent cell is (r, C-1)
+   */
+  _perimEdgeToCell(edge) {
+    if (!edge) return null;
+    const C = this.cells;
+    const { isH, r, c } = edge;
+    if (isH) {
+      if (r === 0) return { r: 0,     c };
+      if (r === C) return { r: C - 1, c };
+    } else {
+      if (c === 0) return { r, c: 0     };
+      if (c === C) return { r, c: C - 1 };
+    }
+    return null;
   }
 
   // ── Edge access ──────────────────────────────────────────────────────────
@@ -275,40 +323,18 @@ class GameState {
    * are completely fine — only cycles in the cell-path graph are errors.
    */
   getErrorCellSet() {
-    if (!this.hasGrayEdges()) return new Set();
+    // In closed mode: only flag cycles while gray edges remain (a full cycle IS the win).
+    // In open mode: any cycle is always wrong (the solution must be a non-looping path).
+    if (!this.openMode && !this.hasGrayEdges()) return new Set();
 
-    const C  = this.cells;
-    const ck = (r, c) => r * C + c;
-    const N  = C * C;
+    const C = this.cells;
+    const { adj, N } = this._buildDoorwayGraph();
 
-    // Build doorway graph from deleted *internal* edges only.
-    // (Perimeter edges are never doorways — they bound the board.)
-    const adj = Array.from({ length: N }, () => []);
-
-    // Deleted horizontal internal edges: shared by cell(r-1,c) and cell(r,c)
-    for (let r = 1; r < C; r++)
-      for (let c = 0; c < C; c++)
-        if (this.hEdges[r][c] === EDGE_NONE) {
-          adj[ck(r - 1, c)].push(ck(r, c));
-          adj[ck(r, c)].push(ck(r - 1, c));
-        }
-
-    // Deleted vertical internal edges: shared by cell(r,c-1) and cell(r,c)
-    for (let r = 0; r < C; r++)
-      for (let c = 1; c < C; c++)
-        if (this.vEdges[r][c] === EDGE_NONE) {
-          adj[ck(r, c - 1)].push(ck(r, c));
-          adj[ck(r, c)].push(ck(r, c - 1));
-        }
-
-    // Find connected components; flag any that contain a cycle.
-    // A connected component on n nodes with >= n edges contains a cycle.
     const visited = new Uint8Array(N);
     const errorIdx = new Set();
 
     for (let start = 0; start < N; start++) {
       if (adj[start].length === 0 || visited[start]) continue;
-
       const comp  = [];
       let   edges = 0;
       const queue = [start];
@@ -317,13 +343,12 @@ class GameState {
         const v = queue.pop();
         comp.push(v);
         for (const u of adj[v]) {
-          edges++;                       // each edge counted twice
+          edges++;
           if (!visited[u]) { visited[u] = 1; queue.push(u); }
         }
       }
       edges /= 2;
-
-      if (edges >= comp.length)         // cycle present in this component
+      if (edges >= comp.length)         // cycle present
         for (const v of comp) errorIdx.add(v);
     }
 
@@ -334,19 +359,13 @@ class GameState {
   }
 
   /**
-   * Returns true when the puzzle is solved:
-   *   - no gray edges remain, and
-   *   - the doorway graph (cells connected via deleted edges) forms exactly
-   *     one connected component that is a single closed cycle, meaning every
-   *     cell on the labyrinth path is part of one continuous closed loop.
+   * Build the doorway graph (cells connected via deleted *internal* edges)
+   * and return { adj, degree, N, ck }.
    */
-  checkWin() {
-    if (this.hasGrayEdges()) return false;
-
+  _buildDoorwayGraph() {
     const C  = this.cells;
-    const ck = (r, c) => r * C + c;
     const N  = C * C;
-
+    const ck = (r, c) => r * C + c;
     const degree = new Int32Array(N);
     const adj    = Array.from({ length: N }, () => []);
 
@@ -362,8 +381,26 @@ class GameState {
           adj[ck(r,c-1)].push(ck(r,c)); adj[ck(r,c)].push(ck(r,c-1));
           degree[ck(r,c-1)]++;          degree[ck(r,c)]++;
         }
+    return { adj, degree, N, ck };
+  }
 
-    // Find all components of the doorway graph.
+  /**
+   * Returns true when the puzzle is solved.
+   *
+   * Closed mode: no gray edges, doorway graph is exactly one closed cycle
+   *   (every path cell has exactly two doorways).
+   *
+   * Open mode: no gray edges, doorway graph is a single simple path whose
+   *   endpoints are the cells adjacent to entry and exit.
+   *   (entry/exit cells have degree 1 in the internal doorway graph;
+   *    all other path cells have degree 2.)
+   */
+  checkWin() {
+    if (this.hasGrayEdges()) return false;
+
+    const { adj, degree, N, ck } = this._buildDoorwayGraph();
+
+    // Find connected components of the doorway graph.
     const visited = new Uint8Array(N);
     const comps   = [];
     for (let start = 0; start < N; start++) {
@@ -379,9 +416,27 @@ class GameState {
       comps.push(verts);
     }
 
-    // Win: exactly one component, and every cell in it has degree exactly 2
-    // (every cell on the path has exactly two doorways — a proper closed loop).
-    return comps.length === 1 && comps[0].every(v => degree[v] === 2);
+    if (!this.openMode) {
+      // Closed: one component, all cells have degree 2 (single closed loop).
+      return comps.length === 1 && comps[0].every(v => degree[v] === 2);
+    }
+
+    // Open: one component, exactly two cells have degree 1 (the endpoints),
+    //       all others degree 2, and the endpoints are the entry/exit cells.
+    if (comps.length !== 1) return false;
+    const comp = comps[0];
+    if (!comp.every(v => degree[v] === 1 || degree[v] === 2)) return false;
+    const leaves = comp.filter(v => degree[v] === 1);
+    if (leaves.length !== 2) return false;
+
+    const eCell = this._perimEdgeToCell(this.entry);
+    const xCell = this._perimEdgeToCell(this.exit);
+    if (!eCell || !xCell) return false;
+
+    const eIdx = ck(eCell.r, eCell.c);
+    const xIdx = ck(xCell.r, xCell.c);
+    return (leaves[0] === eIdx && leaves[1] === xIdx) ||
+           (leaves[0] === xIdx && leaves[1] === eIdx);
   }
 
   // ── Clues ────────────────────────────────────────────────────────────────
