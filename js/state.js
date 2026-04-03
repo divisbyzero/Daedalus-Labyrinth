@@ -116,6 +116,11 @@ class GameState {
    * forward=false: BLACK→GRAY→NONE  (right click)
    */
   clickEdge(isH, r, c, forward) {
+    // Boundary edges are fixed — don't allow toggling.
+    const C = this.cells;
+    if (isH && (r === 0 || r === C)) return;
+    if (!isH && (c === 0 || c === C)) return;
+
     const from = this.getEdge(isH, r, c);
     // Left (forward):  NONE→GRAY→BLACK→GRAY→BLACK…  (BLACK wraps to GRAY, not NONE)
     // Right (backward): BLACK→GRAY→NONE→GRAY→NONE… (NONE wraps to GRAY, not BLACK)

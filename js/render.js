@@ -1,5 +1,50 @@
 'use strict';
 
+// ── Tunable theme & layout ──────────────────────────────────────────────────
+// Change any value here to adjust the look of the game.
+
+const THEME = {
+  // Layout
+  cellSize: 60,       // logical pixels per cell
+  margin: 36,        // padding around the grid
+  hitTolerance: 14,     // edge click detection radius (px)
+
+  // Vertex sizes
+  vertexRadiusNumbered: 11, // radius of numbered (clue) vertices
+  vertexRadiusPlain: 7,   // radius of plain (no-clue) vertices
+
+  // Edge widths
+  edgeWidthBlack: 5,    // wall edge width
+  edgeWidthGray: 1.5,    // undecided edge width
+
+  // Colors — canvas
+  background: '#c8c8c8',
+
+  // Colors — cells
+  cellUndetermined: '#f8f8f8',
+  cellPath: '#e1d5bd',
+  cellEnclosed: '#446e53',
+  cellThreeSides: '#9a9a9a',
+  cellError: '#ee3333',
+
+  // Colors — edges
+  edgeBlack: '#1a472a',
+  edgeGray: '#969696',
+
+  // Colors — numbered vertices
+  vertexProgress: '#111111',  // clue not yet met
+  vertexSatisfied: '#1a472a', // clue exactly met
+  vertexViolated: '#cc2222',  // clue impossible / exceeded
+  vertexRing: 'rgba(255,255,255,0)',
+  vertexText: '#ffffff',
+
+  // Colors — plain vertices
+  vertexPlain: '#1a472a',
+
+  // Entry/exit spill
+  portalSpill: 16,      // how far the path color extends outside the grid
+};
+
 /**
  * Renderer — draws the DL board onto an HTML canvas.
  *
@@ -12,14 +57,6 @@ class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = window.devicePixelRatio || 1;
-
-    this.CELL = 60;   // logical pixels per cell
-    this.MARGIN = 36;   // padding around the grid
-    this.VRAD_NUM = 11; // numbered vertex radius
-    this.VRAD_PLAIN = 7; // unnumbered vertex radius
-    this.EDGE_W_BLACK = 5; // black (wall) edge width
-    this.EDGE_W_GRAY = 1.5;  // gray (undecided) edge width
-    this.EHIT = 14;   // hit-detection tolerance in px
   }
 
   // ── Setup ─────────────────────────────────────────────────────────────────
@@ -27,30 +64,29 @@ class Renderer {
   /** Resize the canvas to fit a board with `cells` cells per side. */
   resize(cells) {
     this._lastCells = cells;
-    const total = this.MARGIN * 2 + cells * this.CELL;
+    const total = THEME.margin * 2 + cells * THEME.cellSize;
     const dpr = this.dpr;
     this.canvas.width = total * dpr;
     this.canvas.height = total * dpr;
     this.canvas.style.width = `${total}px`;
     this.canvas.style.height = `${total}px`;
-    // Apply DPR scaling once; all subsequent draw calls use logical pixels.
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
-  vx(c) { return this.MARGIN + c * this.CELL; }
-  vy(r) { return this.MARGIN + r * this.CELL; }
+  vx(c) { return THEME.margin + c * THEME.cellSize; }
+  vy(r) { return THEME.margin + r * THEME.cellSize; }
 
   // ── Main render ───────────────────────────────────────────────────────────
 
   render(state) {
     const { ctx } = this;
     const C = state.cells;
-    const W = this.MARGIN * 2 + C * this.CELL;
+    const W = THEME.margin * 2 + C * THEME.cellSize;
 
     // Background
-    ctx.fillStyle = '#c8c8c8';
+    ctx.fillStyle = THEME.background;
     ctx.fillRect(0, 0, W, W);
 
     // 1. Cell fills — premature-loop cells override their normal color to red.
@@ -59,7 +95,7 @@ class Renderer {
       for (let c = 0; c < C; c++) {
         const color = errorCells.has(`${r},${c}`) ? CELL.ERROR : state.getCellColor(r, c);
         ctx.fillStyle = this._cellFill(color);
-        ctx.fillRect(this.vx(c), this.vy(r), this.CELL, this.CELL);
+        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
       }
     }
 
@@ -67,25 +103,65 @@ class Renderer {
     this._drawAllEdges(state, EDGE_GRAY);
     this._drawAllEdges(state, EDGE_BLACK);
 
-    // 3. Vertices (on top of everything)
+    // 3. Entry / exit path spill (below vertices)
+    if (state.openMode) {
+      this._drawPortalSpill(ctx, state, state.entry);
+      this._drawPortalSpill(ctx, state, state.exit);
+    }
+
+    // 4. Vertices (on top of everything)
     for (let r = 0; r <= C; r++) {
       for (let c = 0; c <= C; c++) {
         this._drawVertex(ctx, state, r, c);
       }
     }
-
-    // 4. (Portal markers removed — openings are visible as gaps in the perimeter.)
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
+  /**
+   * Draw a small rectangle of the path color spilling outward from an
+   * entry/exit gap, so the openings are visually obvious.
+   */
+  _drawPortalSpill(ctx, state, edge) {
+    if (!edge) return;
+    const C = state.cells;
+    const { isH, r, c } = edge;
+    const S = THEME.cellSize;
+    const spill = THEME.portalSpill;
+
+    ctx.fillStyle = THEME.cellPath;
+
+    if (isH) {
+      // Horizontal edge — gap runs left-right along a top/bottom row.
+      const x = this.vx(c);
+      if (r === 0) {
+        // Top border — spill upward
+        ctx.fillRect(x, this.vy(0) - spill, S, spill);
+      } else {
+        // Bottom border — spill downward
+        ctx.fillRect(x, this.vy(C), S, spill);
+      }
+    } else {
+      // Vertical edge — gap runs top-bottom along a left/right column.
+      const y = this.vy(r);
+      if (c === 0) {
+        // Left border — spill leftward
+        ctx.fillRect(this.vx(0) - spill, y, spill, S);
+      } else {
+        // Right border — spill rightward
+        ctx.fillRect(this.vx(C), y, spill, S);
+      }
+    }
+  }
+
   _cellFill(color) {
     switch (color) {
-      case CELL.ENCLOSED: return '#446e53';
-      case CELL.THREESIDES: return '#9a9a9a';
-      case CELL.PATH: return '#cabca0';
-      case CELL.ERROR: return '#ee3333';
-      default: return '#f8f8f8';
+      case CELL.ENCLOSED: return THEME.cellEnclosed;
+      case CELL.THREESIDES: return THEME.cellThreeSides;
+      case CELL.PATH: return THEME.cellPath;
+      case CELL.ERROR: return THEME.cellError;
+      default: return THEME.cellUndetermined;
     }
   }
 
@@ -94,12 +170,12 @@ class Renderer {
     const C = state.cells;
 
     if (targetState === EDGE_BLACK) {
-      ctx.strokeStyle = '#1a472a';
-      ctx.lineWidth = this.EDGE_W_BLACK;
+      ctx.strokeStyle = THEME.edgeBlack;
+      ctx.lineWidth = THEME.edgeWidthBlack;
       ctx.lineCap = 'round';
     } else {
-      ctx.strokeStyle = '#575757';
-      ctx.lineWidth = this.EDGE_W_GRAY;
+      ctx.strokeStyle = THEME.edgeGray;
+      ctx.lineWidth = THEME.edgeWidthGray;
       ctx.lineCap = 'butt';
     }
 
@@ -138,14 +214,14 @@ class Renderer {
       const max = info.black + info.gray; // max achievable black edges
       let fill;
       if (info.black > info.clue || max < info.clue) {
-        fill = '#cc2222'; // violated — red
+        fill = THEME.vertexViolated;
       } else if (info.black === info.clue) {
-        fill = '#1a472a'; // satisfied — dark green
+        fill = THEME.vertexSatisfied;
       } else {
-        fill = '#111111'; // in progress — black
+        fill = THEME.vertexProgress;
       }
 
-      const R = this.VRAD_NUM;
+      const R = THEME.vertexRadiusNumbered;
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
       ctx.fillStyle = fill;
@@ -154,21 +230,21 @@ class Renderer {
       // White ring so it reads clearly against any cell color
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0)';
+      ctx.strokeStyle = THEME.vertexRing;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold ${Math.round(this.VRAD_NUM * 1.4)}px sans-serif`;
+      ctx.fillStyle = THEME.vertexText;
+      ctx.font = `bold ${Math.round(THEME.vertexRadiusNumbered * 1.4)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(info.clue), x, y);
     } else {
       // Plain vertex dot
-      const R = this.VRAD_PLAIN;
+      const R = THEME.vertexRadiusPlain;
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
-      ctx.fillStyle = '#1a472a';
+      ctx.fillStyle = THEME.vertexPlain;
       ctx.fill();
     }
   }
@@ -182,7 +258,7 @@ class Renderer {
    */
   findEdge(mouseX, mouseY, state) {
     const C = state.cells;
-    const HIT = this.EHIT;
+    const HIT = THEME.hitTolerance;
     let best = null;
     let bestD = HIT + 1;
 
