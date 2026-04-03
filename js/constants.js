@@ -15,9 +15,9 @@ const DIFF_HARD = 2;  // may require trial-and-error (backtracking)
 
 // Cell color codes (derived from border edge states)
 const CELL = Object.freeze({
-  WHITE: 'white',   // undetermined (default)
-  YELLOW: 'yellow',  // exactly 2 black edges — part of labyrinth path
-  GRAY: 'gray',    // 3 black edges — needs one removed or one added
-  BLACK: 'black',   // 4 black edges — walled off
-  RED: 'red',     // 0–1 black + 3+ deleted — illegal state
+  WHITE: 'white',      // undetermined (default)
+  PATH: 'path',       // exactly 2 black edges — part of labyrinth path
+  THREESIDES: 'threesides', // 3 black edges — needs one removed or one added
+  ENCLOSED: 'enclosed',   // 4 black edges — walled off
+  ERROR: 'error',      // 0–1 black + 3+ deleted — illegal state
 });

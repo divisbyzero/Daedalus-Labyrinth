@@ -178,9 +178,9 @@ class GameState {
     const edges = this.getCellEdges(r, c);
     const black = edges.filter(e => e === EDGE_BLACK).length;
     const deleted = edges.filter(e => e === EDGE_NONE).length;
-    if (black === 4) return CELL.BLACK;
-    if (black === 3) return CELL.GRAY;
-    if (black <= 1 && deleted >= 3) return CELL.RED;
+    if (black === 4) return CELL.ENCLOSED;
+    if (black === 3) return CELL.THREESIDES;
+    if (black <= 1 && deleted >= 3) return CELL.ERROR;
     return CELL.WHITE;
   }
 
@@ -210,11 +210,11 @@ class GameState {
       // If the neighbor exists and is gray or red, stay white.
       if (nr >= 0 && nr < C && nc >= 0 && nc < C) {
         const nb = this._getCellBaseColor(nr, nc);
-        if (nb === CELL.GRAY || nb === CELL.RED) return CELL.WHITE;
+        if (nb === CELL.THREESIDES || nb === CELL.ERROR) return CELL.WHITE;
       }
     }
 
-    return hasDeleted ? CELL.YELLOW : CELL.WHITE;
+    return hasDeleted ? CELL.PATH : CELL.WHITE;
   }
 
   // ── Vertex degree ─────────────────────────────────────────────────────────

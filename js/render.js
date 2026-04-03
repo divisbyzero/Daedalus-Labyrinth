@@ -57,7 +57,7 @@ class Renderer {
     const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        const color = errorCells.has(`${r},${c}`) ? CELL.RED : state.getCellColor(r, c);
+        const color = errorCells.has(`${r},${c}`) ? CELL.ERROR : state.getCellColor(r, c);
         ctx.fillStyle = this._cellFill(color);
         ctx.fillRect(this.vx(c), this.vy(r), this.CELL, this.CELL);
       }
@@ -81,10 +81,10 @@ class Renderer {
 
   _cellFill(color) {
     switch (color) {
-      case CELL.BLACK: return '#1e1e1e';
-      case CELL.GRAY: return '#9a9a9a';
-      case CELL.YELLOW: return '#b8e6a0';
-      case CELL.RED: return '#ee3333';
+      case CELL.ENCLOSED: return '#1a472a';
+      case CELL.THREESIDES: return '#9a9a9a';
+      case CELL.PATH: return '#b8e6a0';
+      case CELL.ERROR: return '#ee3333';
       default: return '#f8f8f8';
     }
   }
