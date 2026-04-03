@@ -18,11 +18,11 @@ const THEME = {
   edgeWidthGray: 1.5,    // undecided edge width
 
   // Colors — canvas
-  background: '#9CA38F',  // muted sage
+  background: '#3D3F38',  // muted sage
 
   // Colors — cells
-  cellUndetermined: '#E8DCC8',  // warm packed-earth sand
-  cellPath: '#E8DCC8',          // warm packed-earth sand (same as undetermined)
+  cellUndetermined: '#F2EDE4',   // white (default / undetermined cells)
+  cellPath: '#DCCFB3',          // warm packed-earth sand (labyrinth path)
   cellEnclosed: '#2D5A3F',      // darker botanical green (impassable / tree)
   cellThreeSides: '#B8AFA0',    // warm mid-tone gray
   cellError: 'rgba(196, 112, 88, 0.65)', // dusty terracotta, semi-transparent overlay
@@ -36,14 +36,14 @@ const THEME = {
   vertexSatisfied: '#3A6B4F',  // clue exactly met
   vertexViolated: '#A85A40',   // deeper terracotta — clue impossible / exceeded
   vertexRing: 'rgba(255,255,255,0)',
-  vertexText: '#ffffff',
+  vertexText: '#F2EDE4',
 
   // Colors — plain vertices
   vertexPlain: '#3A6B4F',  // match hedge green
 
   // Entry/exit spill
-  portalSpill: 16,      // how far the path color extends outside the grid
-  portalColor: '#E8D5A3', // pale gold — exit gaps stand out from path
+  portalSpill: 8,      // how far the path color extends outside the grid
+  portalColor: '#DCCFB3', // match path color
 };
 
 /**
