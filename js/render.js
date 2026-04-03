@@ -30,7 +30,6 @@ const THEME = {
   // Colors — edges
   edgeBlack: '#3A6B4F',   // warm botanical green (hedge)
   edgeGray: '#B8AFA0',    // warm mid-tone gray (guide gridline)
-  edgeHover: '#4A7D60',   // lighter green for hover feedback
 
   // Colors — numbered vertices
   vertexProgress: '#3A6B4F',   // clue not yet met
@@ -82,7 +81,7 @@ class Renderer {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
-  render(state, hoveredEdge = null) {
+  render(state) {
     const { ctx } = this;
     const C = state.cells;
     const W = THEME.margin * 2 + C * THEME.cellSize;
@@ -106,7 +105,7 @@ class Renderer {
     }
 
     // 2. Edges
-    this._drawAllEdges(state, EDGE_GRAY, hoveredEdge);
+    this._drawAllEdges(state, EDGE_GRAY);
     this._drawAllEdges(state, EDGE_BLACK);
 
     // 3. Entry / exit path spill (below vertices)
@@ -171,7 +170,7 @@ class Renderer {
     }
   }
 
-  _drawAllEdges(state, targetState, hoveredEdge = null) {
+  _drawAllEdges(state, targetState) {
     const { ctx } = this;
     const C = state.cells;
 
@@ -199,30 +198,6 @@ class Renderer {
         ctx.lineTo(this.vx(c), this.vy(r + 1));
       }
     ctx.stroke();
-
-    // Draw hover highlight during the GRAY pass, for non-fixed non-BLACK edges.
-    if (hoveredEdge && targetState === EDGE_GRAY) {
-      const { isH, r, c } = hoveredEdge;
-      // Skip fixed boundary edges (they can't be toggled).
-      const isFixed = isH ? (r === 0 || r === C) : (c === 0 || c === C);
-      if (!isFixed) {
-        const edgeState = isH ? state.hEdges[r][c] : state.vEdges[r][c];
-        if (edgeState !== EDGE_BLACK) {
-          ctx.strokeStyle = THEME.edgeHover;
-          ctx.lineWidth = THEME.edgeWidthBlack;
-          ctx.lineCap = 'round';
-          ctx.beginPath();
-          if (isH) {
-            ctx.moveTo(this.vx(c), this.vy(r));
-            ctx.lineTo(this.vx(c + 1), this.vy(r));
-          } else {
-            ctx.moveTo(this.vx(c), this.vy(r));
-            ctx.lineTo(this.vx(c), this.vy(r + 1));
-          }
-          ctx.stroke();
-        }
-      }
-    }
   }
 
   _drawVertex(ctx, state, r, c) {

@@ -16,7 +16,6 @@ const btnGenerate = document.getElementById('btnGenerate');
 
 let state = null;
 let renderer = null;
-let hoveredEdge = null;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
@@ -29,7 +28,7 @@ function getSolutionCountUpTo2(s) {
 }
 
 function redraw() {
-  renderer.render(state, hoveredEdge);
+  renderer.render(state);
   updateButtons();
   updateStatus();
 }
@@ -89,27 +88,6 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-canvas.addEventListener('mousemove', (e) => {
-  if (!state || !renderer) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.offsetWidth / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.offsetHeight / rect.height);
-  const edge = renderer.findEdge(mx, my, state);
-  const key = edge ? `${edge.isH},${edge.r},${edge.c}` : null;
-  const prevKey = hoveredEdge ? `${hoveredEdge.isH},${hoveredEdge.r},${hoveredEdge.c}` : null;
-  if (key !== prevKey) {
-    hoveredEdge = edge;
-    redraw();
-  }
-});
-
-canvas.addEventListener('mouseleave', () => {
-  if (hoveredEdge !== null) {
-    hoveredEdge = null;
-    redraw();
-  }
-});
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
