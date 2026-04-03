@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd /Users/richesod/GitHub/Daedalus-s-Labyrinth && node -e \"\n// Load the game files in order\nconst fs = require\\('fs'\\);\neval\\(fs\\.readFileSync\\('js/constants\\.js', 'utf8'\\)\\);\neval\\(fs\\.readFileSync\\('js/state\\.js', 'utf8'\\)\\);\neval\\(fs\\.readFileSync\\('js/generator\\.js', 'utf8'\\)\\);\n\nlet successes = 0, failures = 0;\nconst sizes = \\[4, 5, 6, 7, 8\\];\n\nfor \\(const cells of sizes\\) \\{\n  for \\(let trial = 0; trial < 10; trial\\+\\+\\) \\{\n    try \\{\n      const state = generatePuzzle\\(cells\\);\n      // Build clue grid and check uniqueness\n      const N = state\\.cells;\n      const cg = Array\\.from\\(\\{ length: N \\+ 1 \\}, \\(\\) => new Array\\(N \\+ 1\\)\\.fill\\(null\\)\\);\n      for \\(let r = 1; r < N; r\\+\\+\\)\n        for \\(let c = 1; c < N; c\\+\\+\\) \\{\n          const v = state\\.clues\\[r\\]\\[c\\];\n          if \\(v !== null && v !== undefined\\) cg\\[r\\]\\[c\\] = v;\n        \\}\n      const count = countSolutions\\(cg, N, 2\\);\n      if \\(count === 1\\) \\{\n        successes\\+\\+;\n      \\} else \\{\n        failures\\+\\+;\n        console\\.log\\('FAIL: cells=' \\+ cells \\+ ' trial=' \\+ trial \\+ ' solutions=' \\+ count\\);\n      \\}\n    \\} catch \\(e\\) \\{\n      failures\\+\\+;\n      console\\.log\\('ERROR: cells=' \\+ cells \\+ ' trial=' \\+ trial \\+ ': ' \\+ e\\.message\\);\n    \\}\n  \\}\n\\}\nconsole\\.log\\('Results: ' \\+ successes \\+ ' successes, ' \\+ failures \\+ ' failures out of ' \\+ \\(successes \\+ failures\\)\\);\n\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node test_gen\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

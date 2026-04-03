@@ -40,9 +40,13 @@ function _shuffle(arr) {
 /**
  * Port of loopgen.c generate_loop() for a square grid.
  *
- * Colours every cell of the N×N grid BLACK (outside) or WHITE (inside).
+ * Colours every vertex of the (N+1)×(N+1) vertex grid BLACK or WHITE.
  * The boundary between BLACK and WHITE regions forms a single closed loop
- * that defines the doorway edges.
+ * on the N×N cell grid — each cell has 0 or 2 boundary (doorway) edges.
+ *
+ * The face colouring operates on the VERTEX grid (not the cell grid) so
+ * that the loop boundary is guaranteed to be a cycle on CELLS (the dual).
+ * This matches the DL game model where each cell has degree 0 or 2.
  *
  * Returns { hS, vS } edge arrays:
  *   hS[r][c]   r ∈ [0..N], c ∈ [0..N-1]   — horizontal edges
@@ -50,62 +54,45 @@ function _shuffle(arr) {
  * Each entry is EDGE_NONE (doorway, on the loop) or EDGE_BLACK (wall).
  */
 function generateLoop(N) {
+  const G = N + 1;  // vertex-grid side length
   const GREY = 0, WHITE = 1, BLACK = 2;
 
-  // board[r][c] — colour of each cell; starts GREY.
-  const board = Array.from({ length: N }, () => new Int8Array(N)); // 0 = GREY
+  // board[r][c] — colour of each vertex; starts GREY.
+  const board = Array.from({ length: G }, () => new Int8Array(G)); // 0 = GREY
+
+  // Force boundary vertices to BLACK so perimeter edges are always BLACK.
+  for (let r = 0; r < G; r++)
+    for (let c = 0; c < G; c++)
+      if (r === 0 || r === G - 1 || c === 0 || c === G - 1)
+        board[r][c] = BLACK;
 
   // For the exterior "virtual face": always BLACK.
-  // A cell is adjacent to the exterior if it's on the perimeter row/col.
   function faceColour(r, c) {
-    if (r < 0 || r >= N || c < 0 || c >= N) return BLACK; // exterior
+    if (r < 0 || r >= G || c < 0 || c >= G) return BLACK;
     return board[r][c];
   }
 
-  // Neighbours of cell (r,c): the 4 orthogonal cells + exterior represented as null.
-  // We return [{r,c}] for real cells, but for scoring/adjacency we use faceColour.
   const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   function cellNeighbours(r, c) {
     const out = [];
-    for (const [dr, dc] of DIRS) {
-      const nr = r + dr, nc = c + dc;
-      out.push([nr, nc]); // may be out-of-bounds → exterior
-    }
+    for (const [dr, dc] of DIRS) out.push([r + dr, c + dc]);
     return out;
   }
 
-  /**
-   * can_colour_face() port: can we colour cell (r,c) with `colour`
-   * without creating a topological violation?
-   *
-   * Rules:
-   *  1. Must be adjacent to at least one cell of the same colour.
-   *  2. Walking around the cell's perimeter (inflated outward), the number
-   *     of colour/not-colour transitions must be exactly 2.
-   */
   function canColourCell(r, c, colour) {
     if (board[r][c] !== GREY) return false;
 
-    // Rule 1: must be adjacent to at least one same-coloured face.
     let foundNeighbour = false;
     for (const [nr, nc] of cellNeighbours(r, c)) {
       if (faceColour(nr, nc) === colour) { foundNeighbour = true; break; }
     }
     if (!foundNeighbour) return false;
 
-    // Rule 2: count colour transitions around the cell's surrounding faces.
-    // For a square cell, the "inflated perimeter" visits 8 surrounding faces
-    // in order (the 4 edge-adjacent + 4 corner-adjacent), going clockwise:
-    //   top, top-right, right, bottom-right, bottom, bottom-left, left, top-left
     const surrounding = [
-      [r - 1, c],     // top
-      [r - 1, c + 1], // top-right
-      [r, c + 1],     // right
-      [r + 1, c + 1], // bottom-right
-      [r + 1, c],     // bottom
-      [r + 1, c - 1], // bottom-left
-      [r, c - 1],     // left
-      [r - 1, c - 1], // top-left
+      [r - 1, c], [r - 1, c + 1],
+      [r, c + 1], [r + 1, c + 1],
+      [r + 1, c], [r + 1, c - 1],
+      [r, c - 1], [r - 1, c - 1],
     ];
     let transitions = 0;
     const n = surrounding.length;
@@ -115,11 +102,9 @@ function generateLoop(N) {
       if (cur !== prev) transitions++;
       prev = cur;
     }
-
     return transitions === 2;
   }
 
-  /** Count neighbours of cell (r,c) that have the given colour. */
   function numNeighboursOfColour(r, c, colour) {
     let count = 0;
     for (const [nr, nc] of cellNeighbours(r, c))
@@ -127,40 +112,34 @@ function generateLoop(N) {
     return count;
   }
 
-  /**
-   * Score for colouring a cell: we want to maximise loopiness, so we favour
-   * cells with fewer same-coloured neighbours (negative count → higher score
-   * = more "frontier" feel).
-   */
   function cellScore(r, c, colour) {
     return -numNeighboursOfColour(r, c, colour);
   }
 
-  // ── Main face-colouring loop (loopgen.c generate_loop) ───────────────────
+  // ── Main face-colouring loop ─────────────────────────────────────────────
 
-  // Colour one random cell WHITE.
-  const startIdx = (Math.random() * N * N) | 0;
-  board[(startIdx / N) | 0][startIdx % N] = WHITE;
+  // Colour one random interior vertex WHITE.
+  const innerG = G - 2;
+  if (innerG < 2) throw new Error('Grid too small for loop generation (need cells >= 4)');
+  const startIdx = (Math.random() * innerG * innerG) | 0;
+  board[1 + ((startIdx / innerG) | 0)][1 + (startIdx % innerG)] = WHITE;
 
-  // Each GREY cell has a random tiebreaker (fixed for this generation run).
-  const randomKey = Array.from({ length: N * N }, () => Math.random());
+  const randomKey = Array.from({ length: G * G }, () => Math.random());
 
-  // Sorted candidate lists (we re-sort each iteration; N is small enough).
   function buildCandidates(colour) {
     const list = [];
-    for (let r = 0; r < N; r++) {
-      for (let c = 0; c < N; c++) {
+    for (let r = 0; r < G; r++) {
+      for (let c = 0; c < G; c++) {
         if (board[r][c] !== GREY) continue;
         if (canColourCell(r, c, colour)) {
           list.push({
             r, c,
             score: cellScore(r, c, colour),
-            rnd: randomKey[r * N + c],
+            rnd: randomKey[r * G + c],
           });
         }
       }
     }
-    // Sort descending by score, then descending by random tiebreaker.
     list.sort((a, b) => (b.score - a.score) || (b.rnd - a.rnd));
     return list;
   }
@@ -170,30 +149,23 @@ function generateLoop(N) {
     const darkable = buildCandidates(BLACK);
     if (lightable.length === 0 && darkable.length === 0) break;
 
-    // Pick WHITE or BLACK at random.
     const colour = Math.random() < 0.5 ? WHITE : BLACK;
     const candidates = (colour === WHITE) ? lightable : darkable;
-
-    // Pick the best-scoring candidate (first in sorted list).
-    if (candidates.length === 0) continue; // try the other colour next iteration
+    if (candidates.length === 0) continue;
     const chosen = candidates[0];
     board[chosen.r][chosen.c] = colour;
   }
 
-  // ── Tendril-growing pass (loopgen.c post-processing) ─────────────────────
-  // Flip any face that is adjacent to exactly one opposite-coloured face,
-  // if the flip is legal. Repeat until no more flips occur.
-  const faceOrder = _shuffle(Array.from({ length: N * N }, (_, i) => i));
+  // ── Tendril-growing pass ─────────────────────────────────────────────────
+  const faceOrder = _shuffle(Array.from({ length: G * G }, (_, i) => i));
 
   let doRandomPass = false;
   while (true) {
     let flipped = false;
     for (const idx of faceOrder) {
-      const r = (idx / N) | 0, c = idx % N;
+      const r = (idx / G) | 0, c = idx % G;
       const opp = (board[r][c] === WHITE) ? BLACK : WHITE;
       if (!canColourCell(r, c, opp)) continue;
-      // canColourCell checks board[r][c]===GREY, but we're flipping a coloured
-      // cell. Temporarily set to GREY to use canColourCell.
       const orig = board[r][c];
       board[r][c] = GREY;
       if (!canColourCell(r, c, opp)) { board[r][c] = orig; continue; }
@@ -212,29 +184,22 @@ function generateLoop(N) {
     if (!flipped) doRandomPass = true;
   }
 
-  // ── Convert face colouring to edge arrays ─────────────────────────────────
-  // An edge between two cells (or a cell and the exterior) is a doorway
-  // (EDGE_NONE / on the loop) iff the two faces have different colours.
-  // Otherwise it's a wall (EDGE_BLACK).
+  // ── Convert vertex colouring to edge arrays ───────────────────────────────
+  // Edge between two adjacent vertices is a doorway (EDGE_NONE) iff the
+  // vertices have different colours, otherwise a wall (EDGE_BLACK).
+  // This produces a loop on the CELL graph (each cell has 0 or 2 doorways).
   const hS = Array.from({ length: N + 1 }, () => new Array(N).fill(EDGE_BLACK));
   const vS = Array.from({ length: N }, () => new Array(N + 1).fill(EDGE_BLACK));
 
-  // Horizontal edges: hS[r][c] is between cell(r-1,c) and cell(r,c).
-  for (let r = 0; r <= N; r++) {
-    for (let c = 0; c < N; c++) {
-      const above = faceColour(r - 1, c);
-      const below = faceColour(r, c);
-      hS[r][c] = (above !== below) ? EDGE_NONE : EDGE_BLACK;
-    }
-  }
-  // Vertical edges: vS[r][c] is between cell(r,c-1) and cell(r,c).
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c <= N; c++) {
-      const left = faceColour(r, c - 1);
-      const right = faceColour(r, c);
-      vS[r][c] = (left !== right) ? EDGE_NONE : EDGE_BLACK;
-    }
-  }
+  // hS[r][c]: horizontal edge between vertex(r,c) and vertex(r,c+1).
+  for (let r = 0; r <= N; r++)
+    for (let c = 0; c < N; c++)
+      hS[r][c] = (board[r][c] !== board[r][c + 1]) ? EDGE_NONE : EDGE_BLACK;
+
+  // vS[r][c]: vertical edge between vertex(r,c) and vertex(r+1,c).
+  for (let r = 0; r < N; r++)
+    for (let c = 0; c <= N; c++)
+      vS[r][c] = (board[r][c] !== board[r + 1][c]) ? EDGE_NONE : EDGE_BLACK;
 
   return { hS, vS };
 }
@@ -612,11 +577,16 @@ function _removeRedundantClues(clueGrid, N) {
 function generatePuzzle(cells) {
   const N = cells;
 
-  // Phase 1 — generate a random closed loop via face colouring.
-  const { hS, vS } = generateLoop(N);
-
-  // Phase 2 — Solution edges + full clue set
-  const clueGrid = _extractAllClues(hS, vS, N);
+  // Phase 1 + 2 — Generate a loop and extract full clue set.
+  // Like Loopy's new_game_desc(), retry if the full clue set doesn't
+  // yield a unique solution (rare, mainly on very small grids).
+  let hS, vS, clueGrid;
+  for (let attempt = 0; ; attempt++) {
+    if (attempt > 100) throw new Error('Could not generate a unique board after many attempts.');
+    ({ hS, vS } = generateLoop(N));
+    clueGrid = _extractAllClues(hS, vS, N);
+    if (hasUniqueSolution(clueGrid, N)) break;
+  }
 
   // Phase 3 — Remove redundant clues (Loopy's remove_clues)
   _removeRedundantClues(clueGrid, N);
