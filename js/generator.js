@@ -224,56 +224,138 @@ function generateLoop(N) {
 // ── Phase 2: Extract clues from solution ─────────────────────────────────────
 
 /**
- * Convert a closed loop into an open path by breaking one doorway edge
- * between two border cells and opening a perimeter wall for each endpoint.
+ * Convert a closed loop into an open path by choosing two border cells
+ * on the loop, opening a perimeter wall at each, and severing the shorter
+ * arc between them.
+ *
+ * To avoid destroying too many path cells, the severed arc is capped at
+ * ~15% of the cycle length (and at most 6 edges).  Among eligible pairs
+ * the one with the greatest Manhattan distance is preferred so the two
+ * openings tend to be far apart visually.
  *
  * Mutates hS/vS in-place.  Returns { entry, exit } where each is
  * { isH, r, c } identifying the opened perimeter edge, or null if no
- * suitable break-point exists (caller should retry with a new loop).
+ * suitable pair exists (caller should retry with a new loop).
  */
 function _selectEntryExit(hS, vS, N) {
-  function isBorder(r, c) {
-    return r === 0 || r === N - 1 || c === 0 || c === N - 1;
-  }
+  // Build the cycle as an ordered list of cell indices.
+  const ck = (r, c) => r * N + c;
+  const deg = new Uint8Array(N * N);
+  const adj = Array.from({ length: N * N }, () => []);
 
-  // Find internal doorway edges where BOTH adjacent cells are border cells.
-  const candidates = [];
-
-  // Internal horizontal edges  h[r][c], r ∈ [1..N-1]
   for (let r = 1; r < N; r++)
     for (let c = 0; c < N; c++)
-      if (hS[r][c] === EDGE_NONE && isBorder(r - 1, c) && isBorder(r, c))
-        candidates.push({ isH: true, r, c, aR: r - 1, aC: c, bR: r, bC: c });
-
-  // Internal vertical edges  v[r][c], c ∈ [1..N-1]
+      if (hS[r][c] === EDGE_NONE) {
+        const a = ck(r - 1, c), b = ck(r, c);
+        adj[a].push(b); adj[b].push(a);
+        deg[a]++; deg[b]++;
+      }
   for (let r = 0; r < N; r++)
     for (let c = 1; c < N; c++)
-      if (vS[r][c] === EDGE_NONE && isBorder(r, c - 1) && isBorder(r, c))
-        candidates.push({ isH: false, r, c, aR: r, aC: c - 1, bR: r, bC: c });
+      if (vS[r][c] === EDGE_NONE) {
+        const a = ck(r, c - 1), b = ck(r, c);
+        adj[a].push(b); adj[b].push(a);
+        deg[a]++; deg[b]++;
+      }
 
-  if (candidates.length === 0) return null;
+  // Walk the cycle.
+  let start = -1;
+  for (let i = 0; i < N * N; i++) if (deg[i] === 2) { start = i; break; }
+  if (start < 0) return null;
 
-  // Pick a random candidate.
-  const pick = candidates[(Math.random() * candidates.length) | 0];
+  const cycle = [start];
+  const vis = new Uint8Array(N * N);
+  vis[start] = 1;
+  let cur = start;
+  while (true) {
+    let next = -1;
+    for (const nb of adj[cur]) if (!vis[nb]) { next = nb; break; }
+    if (next < 0) break;
+    vis[next] = 1;
+    cycle.push(next);
+    cur = next;
+  }
 
-  // Break the doorway edge → converts the cycle into a path.
-  if (pick.isH) hS[pick.r][pick.c] = EDGE_BLACK;
-  else vS[pick.r][pick.c] = EDGE_BLACK;
+  // Collect cycle-positions of border cells.
+  function isBorder(idx) {
+    const r = (idx / N) | 0, c = idx % N;
+    return r === 0 || r === N - 1 || c === 0 || c === N - 1;
+  }
+  const borderPos = [];
+  for (let i = 0; i < cycle.length; i++)
+    if (isBorder(cycle[i])) borderPos.push(i);
+  if (borderPos.length < 2) return null;
 
-  // Open a perimeter wall adjacent to each endpoint cell.
-  function openPerim(cr, cc) {
+  // Cap the severed arc: at most ~15 % of the cycle, hard-capped at 6.
+  const L = cycle.length;
+  let maxArc = Math.min(6, Math.max(2, (L * 0.15) | 0));
+
+  // Find eligible pairs (shorter arc ≤ maxArc).  Widen if none found.
+  let eligible = [];
+  while (eligible.length === 0) {
+    for (let i = 0; i < borderPos.length; i++) {
+      for (let j = i + 1; j < borderPos.length; j++) {
+        const pA = borderPos[i], pB = borderPos[j];
+        const arc1 = pB - pA, arc2 = L - arc1;
+        const shortArc = Math.min(arc1, arc2);
+        if (shortArc <= maxArc) eligible.push({ posA: pA, posB: pB, shortArc });
+      }
+    }
+    if (eligible.length === 0) maxArc = Math.min(maxArc * 2, ((L / 2) | 0) + 1);
+  }
+
+  // Among eligible pairs, prefer the largest Manhattan distance.
+  // Collect all pairs tied for the best distance, then pick randomly.
+  let bestDist = -1;
+  let bestList = [];
+  for (const p of eligible) {
+    const idxA = cycle[p.posA], idxB = cycle[p.posB];
+    const rA = (idxA / N) | 0, cA = idxA % N;
+    const rB = (idxB / N) | 0, cB = idxB % N;
+    const d = Math.abs(rA - rB) + Math.abs(cA - cB);
+    if (d > bestDist) { bestDist = d; bestList = [p]; }
+    else if (d === bestDist) bestList.push(p);
+  }
+  const pick = bestList[(Math.random() * bestList.length) | 0];
+  let { posA, posB } = pick;
+  if (posA > posB) { const t = posA; posA = posB; posB = t; }
+
+  const cellA = cycle[posA];
+  const cellB = cycle[posB];
+
+  // Sever the shorter arc — seal every doorway edge along it.
+  const arc1Len = posB - posA;
+  const arc2Len = L - arc1Len;
+  const severArc1 = arc1Len <= arc2Len;
+  const arcStart = severArc1 ? posA : posB;
+  const arcEdges = severArc1 ? arc1Len : arc2Len;
+
+  for (let k = 0; k < arcEdges; k++) {
+    const from = cycle[(arcStart + k) % L];
+    const to = cycle[(arcStart + k + 1) % L];
+    const rF = (from / N) | 0, cF = from % N;
+    const rT = (to / N) | 0, cT = to % N;
+    if (rF === rT)
+      vS[rF][Math.max(cF, cT)] = EDGE_BLACK;
+    else
+      hS[Math.max(rF, rT)][cF] = EDGE_BLACK;
+  }
+
+  // Open a perimeter wall for each endpoint.
+  function openPerim(idx) {
+    const r = (idx / N) | 0, c = idx % N;
     const opts = [];
-    if (cr === 0) opts.push({ isH: true, r: 0, c: cc });
-    if (cr === N - 1) opts.push({ isH: true, r: N, c: cc });
-    if (cc === 0) opts.push({ isH: false, r: cr, c: 0 });
-    if (cc === N - 1) opts.push({ isH: false, r: cr, c: N });
+    if (r === 0) opts.push({ isH: true, r: 0, c });
+    if (r === N - 1) opts.push({ isH: true, r: N, c });
+    if (c === 0) opts.push({ isH: false, r, c: 0 });
+    if (c === N - 1) opts.push({ isH: false, r, c: N });
     const o = opts[(Math.random() * opts.length) | 0];
     if (o.isH) hS[o.r][o.c] = EDGE_NONE; else vS[o.r][o.c] = EDGE_NONE;
     return o;
   }
 
-  const entry = openPerim(pick.aR, pick.aC);
-  const exit = openPerim(pick.bR, pick.bC);
+  const entry = openPerim(cellA);
+  const exit = openPerim(cellB);
   return { entry, exit };
 }
 

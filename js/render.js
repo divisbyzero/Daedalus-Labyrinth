@@ -10,13 +10,13 @@
 class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx    = canvas.getContext('2d');
-    this.dpr    = window.devicePixelRatio || 1;
+    this.ctx = canvas.getContext('2d');
+    this.dpr = window.devicePixelRatio || 1;
 
-    this.CELL   = 60;   // logical pixels per cell
+    this.CELL = 60;   // logical pixels per cell
     this.MARGIN = 36;   // padding around the grid
-    this.VRAD   = 7;    // vertex dot radius
-    this.EHIT   = 14;   // hit-detection tolerance in px
+    this.VRAD = 7;    // vertex dot radius
+    this.EHIT = 14;   // hit-detection tolerance in px
   }
 
   // ── Setup ─────────────────────────────────────────────────────────────────
@@ -25,10 +25,10 @@ class Renderer {
   resize(cells) {
     this._lastCells = cells;
     const total = this.MARGIN * 2 + cells * this.CELL;
-    const dpr   = this.dpr;
-    this.canvas.width        = total * dpr;
-    this.canvas.height       = total * dpr;
-    this.canvas.style.width  = `${total}px`;
+    const dpr = this.dpr;
+    this.canvas.width = total * dpr;
+    this.canvas.height = total * dpr;
+    this.canvas.style.width = `${total}px`;
     this.canvas.style.height = `${total}px`;
     // Apply DPR scaling once; all subsequent draw calls use logical pixels.
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -43,8 +43,8 @@ class Renderer {
 
   render(state) {
     const { ctx } = this;
-    const C  = state.cells;
-    const W  = this.MARGIN * 2 + C * this.CELL;
+    const C = state.cells;
+    const W = this.MARGIN * 2 + C * this.CELL;
 
     // Background
     ctx.fillStyle = '#c8c8c8';
@@ -71,20 +71,18 @@ class Renderer {
       }
     }
 
-    // 4. Entry / exit markers in the margin
-    if (state.entry) this._drawPortal(ctx, state.entry, 'IN',  '#228833');
-    if (state.exit)  this._drawPortal(ctx, state.exit,  'OUT', '#cc5500');
+    // 4. (Portal markers removed — openings are visible as gaps in the perimeter.)
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
   _cellFill(color) {
     switch (color) {
-      case CELL.BLACK:  return '#1e1e1e';
-      case CELL.GRAY:   return '#9a9a9a';
+      case CELL.BLACK: return '#1e1e1e';
+      case CELL.GRAY: return '#9a9a9a';
       case CELL.YELLOW: return '#ffee55';
-      case CELL.RED:    return '#ee3333';
-      default:          return '#f8f8f8';
+      case CELL.RED: return '#ee3333';
+      default: return '#f8f8f8';
     }
   }
 
@@ -94,19 +92,19 @@ class Renderer {
 
     if (targetState === EDGE_BLACK) {
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth   = 4.5;
-      ctx.lineCap     = 'round';
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = 'round';
     } else {
       ctx.strokeStyle = '#b0b0b0';
-      ctx.lineWidth   = 1.5;
-      ctx.lineCap     = 'butt';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'butt';
     }
 
     ctx.beginPath();
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++) {
         if (state.hEdges[r][c] !== targetState) continue;
-        ctx.moveTo(this.vx(c),     this.vy(r));
+        ctx.moveTo(this.vx(c), this.vy(r));
         ctx.lineTo(this.vx(c + 1), this.vy(r));
       }
     for (let r = 0; r < C; r++)
@@ -119,9 +117,9 @@ class Renderer {
   }
 
   _drawVertex(ctx, state, r, c) {
-    const x    = this.vx(c);
-    const y    = this.vy(r);
-    const C    = state.cells;
+    const x = this.vx(c);
+    const y = this.vy(r);
+    const C = state.cells;
 
     // Perimeter vertices sit on fixed boundary edges — they never get clue numbers.
     const isPerimeter = (r === 0 || r === C || c === 0 || c === C);
@@ -154,12 +152,12 @@ class Renderer {
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.lineWidth   = 2;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle    = '#ffffff';
-      ctx.font         = `bold ${Math.round(this.VRAD * 2.2)}px sans-serif`;
-      ctx.textAlign    = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${Math.round(this.VRAD * 2.2)}px sans-serif`;
+      ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(info.clue), x, y);
     } else {
@@ -171,64 +169,6 @@ class Renderer {
     }
   }
 
-  // ── Entry / exit markers ─────────────────────────────────────────────────
-
-  /**
-   * Draw a small coloured label ("IN" or "OUT") in the margin just outside
-   * the perimeter gap created by entry or exit.
-   *
-   * edge: { isH, r, c }  — the deleted perimeter edge
-   * label: string        — text to draw
-   * color: CSS colour string
-   */
-  _drawPortal(ctx, edge, label, color) {
-    const { isH, r, c } = edge;
-    const C   = this._lastCells;   // set in resize()
-    const PAD = 10;                // pixels from grid edge into margin
-
-    let x, y, arrowDx, arrowDy;
-
-    if (isH) {
-      // Horizontal perimeter edge — entry/exit is on top (r=0) or bottom (r=C)
-      x = this.vx(c) + this.CELL / 2;
-      if (r === 0) {
-        y      = this.vy(0) - PAD;
-        arrowDy =  1; arrowDx = 0;  // arrow points downward (into board)
-      } else {
-        y      = this.vy(C) + PAD;
-        arrowDy = -1; arrowDx = 0;  // arrow points upward (into board)
-      }
-    } else {
-      // Vertical perimeter edge — entry/exit is on left (c=0) or right (c=C)
-      y = this.vy(r) + this.CELL / 2;
-      if (c === 0) {
-        x      = this.vx(0) - PAD;
-        arrowDx =  1; arrowDy = 0;  // arrow points right (into board)
-      } else {
-        x      = this.vx(C) + PAD;
-        arrowDx = -1; arrowDy = 0;  // arrow points left (into board)
-      }
-    }
-
-    // Small filled triangle (arrow head pointing into the board)
-    const AS = 7; // arrow size
-    ctx.beginPath();
-    ctx.moveTo(x + arrowDx * AS,                   y + arrowDy * AS);
-    ctx.lineTo(x - arrowDx * AS + arrowDy * AS,    y - arrowDy * AS + arrowDx * AS);
-    ctx.lineTo(x - arrowDx * AS - arrowDy * AS,    y - arrowDy * AS - arrowDx * AS);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-
-    // Label text offset away from the board
-    ctx.fillStyle    = color;
-    ctx.font         = 'bold 10px sans-serif';
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    const textOffset = 14;
-    ctx.fillText(label, x - arrowDx * textOffset, y - arrowDy * textOffset);
-  }
-
   // ── Hit detection ─────────────────────────────────────────────────────────
 
   /**
@@ -237,10 +177,10 @@ class Renderer {
    * Returns { isH, r, c } where isH=true means horizontal edge.
    */
   findEdge(mouseX, mouseY, state) {
-    const C    = state.cells;
-    const HIT  = this.EHIT;
-    let best   = null;
-    let bestD  = HIT + 1;
+    const C = state.cells;
+    const HIT = this.EHIT;
+    let best = null;
+    let bestD = HIT + 1;
 
     // Horizontal edges
     for (let r = 0; r <= C; r++) {
@@ -250,7 +190,7 @@ class Renderer {
       for (let c = 0; c < C; c++) {
         const x1 = this.vx(c), x2 = this.vx(c + 1);
         if (mouseX < x1 - HIT || mouseX > x2 + HIT) continue;
-        const dx   = Math.max(0, x1 - mouseX, mouseX - x2);
+        const dx = Math.max(0, x1 - mouseX, mouseX - x2);
         const dist = Math.hypot(dx, dy);
         if (dist < bestD) { bestD = dist; best = { isH: true, r, c }; }
       }
@@ -264,7 +204,7 @@ class Renderer {
       for (let r = 0; r < C; r++) {
         const y1 = this.vy(r), y2 = this.vy(r + 1);
         if (mouseY < y1 - HIT || mouseY > y2 + HIT) continue;
-        const dy   = Math.max(0, y1 - mouseY, mouseY - y2);
+        const dy = Math.max(0, y1 - mouseY, mouseY - y2);
         const dist = Math.hypot(dx, dy);
         if (dist < bestD) { bestD = dist; best = { isH: false, r, c }; }
       }
