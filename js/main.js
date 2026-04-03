@@ -2,29 +2,29 @@
 
 // ── DOM references ────────────────────────────────────────────────────────────
 
-const canvas        = document.getElementById('gameCanvas');
-const btnUndo       = document.getElementById('btnUndo');
-const btnRedo       = document.getElementById('btnRedo');
-const btnReset      = document.getElementById('btnReset');
+const canvas = document.getElementById('gameCanvas');
+const btnUndo = document.getElementById('btnUndo');
+const btnRedo = document.getElementById('btnRedo');
+const btnReset = document.getElementById('btnReset');
 const btnShowSolution = document.getElementById('btnShowSolution');
-const puzzleSelect  = document.getElementById('puzzleSelect');
-const statusMsg     = document.getElementById('statusMsg');
-const loopyInput    = document.getElementById('loopyInput');
-const btnLoad       = document.getElementById('btnLoad');
-const importError   = document.getElementById('importError');
-const genSize       = document.getElementById('genSize');
-const btnGenerate   = document.getElementById('btnGenerate');
+const puzzleSelect = document.getElementById('puzzleSelect');
+const statusMsg = document.getElementById('statusMsg');
+const loopyInput = document.getElementById('loopyInput');
+const btnLoad = document.getElementById('btnLoad');
+const importError = document.getElementById('importError');
+const genSize = document.getElementById('genSize');
+const btnGenerate = document.getElementById('btnGenerate');
 
 // ── App state ─────────────────────────────────────────────────────────────────
 
-let state    = null;
+let state = null;
 let renderer = null;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 function initPuzzle(name) {
   const { state: s, label } = loadPuzzle(name);
-  state    = s;
+  state = s;
   renderer = renderer || new Renderer(canvas);
   renderer.resize(state.cells);
   redraw();
@@ -79,9 +79,9 @@ function applySolvedEdgesToState(s, solved) {
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
 
-  const rect   = canvas.getBoundingClientRect();
-  const mx     = (e.clientX - rect.left)  * (canvas.offsetWidth  / rect.width);
-  const my     = (e.clientY - rect.top)   * (canvas.offsetHeight / rect.height);
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.offsetWidth / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.offsetHeight / rect.height);
 
   const edge = renderer.findEdge(mx, my, state);
   if (!edge) return;
@@ -136,7 +136,7 @@ btnGenerate.addEventListener('click', () => {
   // Defer one frame so the browser can repaint the status before the DFS runs.
   requestAnimationFrame(() => {
     try {
-      state    = generatePuzzle(cells);
+      state = generatePuzzle(cells);
       renderer = renderer || new Renderer(canvas);
       renderer.resize(cells);
       redraw();

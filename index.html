@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Daedalus's Labyrinth</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
   <header>
     <h1>Daedalus's Labyrinth</h1>
@@ -48,7 +50,7 @@
       <label for="loopyInput">Import from Loopy — paste a game string or URL:</label>
       <div id="importRow">
         <input id="loopyInput" type="text" spellcheck="false"
-               placeholder="e.g.  7x7t0:a3b2a1…  or paste the full Loopy URL">
+          placeholder="e.g.  7x7t0:a3b2a1…  or paste the full Loopy URL">
         <button id="btnLoad">Load</button>
       </div>
       <div id="importError"></div>
@@ -57,11 +59,16 @@
       <canvas id="gameCanvas"></canvas>
     </div>
     <div id="legend">
-      <span class="legend-item"><span class="swatch" style="background:#fff;border:1px solid #999"></span>Undetermined</span>
-      <span class="legend-item"><span class="swatch" style="background:#ffee66;border:1px solid #cca800"></span>Path (2 edges)</span>
-      <span class="legend-item"><span class="swatch" style="background:#999;border:1px solid #666"></span>Needs fix (3 edges)</span>
-      <span class="legend-item"><span class="swatch" style="background:#222;border:1px solid #000"></span>Walled (4 edges)</span>
-      <span class="legend-item"><span class="swatch" style="background:#ff4444;border:1px solid #cc0000"></span>Error</span>
+      <span class="legend-item"><span class="swatch"
+          style="background:#fff;border:1px solid #999"></span>Undetermined</span>
+      <span class="legend-item"><span class="swatch" style="background:#ffee66;border:1px solid #cca800"></span>Path (2
+        edges)</span>
+      <span class="legend-item"><span class="swatch" style="background:#999;border:1px solid #666"></span>Needs fix (3
+        edges)</span>
+      <span class="legend-item"><span class="swatch" style="background:#222;border:1px solid #000"></span>Walled (4
+        edges)</span>
+      <span class="legend-item"><span class="swatch"
+          style="background:#ff4444;border:1px solid #cc0000"></span>Error</span>
     </div>
     <div id="instructions">
       <strong>Left-click</strong> an edge: cycle none → gray → black &nbsp;|&nbsp;
@@ -76,4 +83,5 @@
   <script src="js/generator.js"></script>
   <script src="js/main.js"></script>
 </body>
+
 </html>
