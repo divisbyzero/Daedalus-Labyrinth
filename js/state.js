@@ -35,7 +35,7 @@ class GameState {
     // Entry / exit — each is { isH, r, c } identifying a perimeter edge,
     // or null for closed-labyrinth mode.
     this.entry = null;
-    this.exit  = null;
+    this.exit = null;
 
     // Undo / redo stacks — each entry: { isH, r, c, from, to }
     this._undoStack = [];
@@ -56,7 +56,7 @@ class GameState {
     }
     // Re-open entry/exit if already set (called by reset()).
     if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_NONE);
-    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_NONE);
+    if (this.exit) this._setEdge(this.exit.isH, this.exit.r, this.exit.c, EDGE_NONE);
   }
 
   /**
@@ -67,12 +67,12 @@ class GameState {
   setEntryExit(entry, exit) {
     // Seal any previously-open entry/exit back to black.
     if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_BLACK);
-    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_BLACK);
+    if (this.exit) this._setEdge(this.exit.isH, this.exit.r, this.exit.c, EDGE_BLACK);
     this.entry = entry;
-    this.exit  = exit;
+    this.exit = exit;
     // Open the new ones.
     if (this.entry) this._setEdge(this.entry.isH, this.entry.r, this.entry.c, EDGE_NONE);
-    if (this.exit)  this._setEdge(this.exit.isH,  this.exit.r,  this.exit.c,  EDGE_NONE);
+    if (this.exit) this._setEdge(this.exit.isH, this.exit.r, this.exit.c, EDGE_NONE);
   }
 
   /** True if the puzzle uses entrance/exit mode rather than closed-loop mode. */
@@ -90,10 +90,10 @@ class GameState {
     const C = this.cells;
     const { isH, r, c } = edge;
     if (isH) {
-      if (r === 0) return { r: 0,     c };
+      if (r === 0) return { r: 0, c };
       if (r === C) return { r: C - 1, c };
     } else {
-      if (c === 0) return { r, c: 0     };
+      if (c === 0) return { r, c: 0 };
       if (c === C) return { r, c: C - 1 };
     }
     return null;
@@ -107,7 +107,7 @@ class GameState {
 
   _setEdge(isH, r, c, value) {
     if (isH) this.hEdges[r][c] = value;
-    else     this.vEdges[r][c] = value;
+    else this.vEdges[r][c] = value;
   }
 
   /**
@@ -122,12 +122,12 @@ class GameState {
     let to;
     if (forward) {
       to = (from === EDGE_NONE) ? EDGE_GRAY
-         : (from === EDGE_GRAY) ? EDGE_BLACK
-         :                        EDGE_GRAY;  // BLACK→GRAY
+        : (from === EDGE_GRAY) ? EDGE_BLACK
+          : EDGE_GRAY;  // BLACK→GRAY
     } else {
       to = (from === EDGE_BLACK) ? EDGE_GRAY
-         : (from === EDGE_GRAY)  ? EDGE_NONE
-         :                         EDGE_GRAY; // NONE→GRAY
+        : (from === EDGE_GRAY) ? EDGE_NONE
+          : EDGE_GRAY; // NONE→GRAY
     }
     if (from === to) return;
     this._undoStack.push({ isH, r, c, from, to });
@@ -175,11 +175,11 @@ class GameState {
    *   otherwise            → WHITE
    */
   _getCellBaseColor(r, c) {
-    const edges   = this.getCellEdges(r, c);
-    const black   = edges.filter(e => e === EDGE_BLACK).length;
+    const edges = this.getCellEdges(r, c);
+    const black = edges.filter(e => e === EDGE_BLACK).length;
     const deleted = edges.filter(e => e === EDGE_NONE).length;
-    if (black === 4)                return CELL.BLACK;
-    if (black === 3)                return CELL.GRAY;
+    if (black === 4) return CELL.BLACK;
+    if (black === 3) return CELL.GRAY;
     if (black <= 1 && deleted >= 3) return CELL.RED;
     return CELL.WHITE;
   }
@@ -197,10 +197,10 @@ class GameState {
     const C = this.cells;
     // [edge state, neighbor row, neighbor col]
     const sides = [
-      [this.hEdges[r][c],         r - 1, c    ],  // top
-      [this.hEdges[r + 1][c],     r + 1, c    ],  // bottom
-      [this.vEdges[r][c],         r,     c - 1],  // left
-      [this.vEdges[r][c + 1],     r,     c + 1],  // right
+      [this.hEdges[r][c], r - 1, c],  // top
+      [this.hEdges[r + 1][c], r + 1, c],  // bottom
+      [this.vEdges[r][c], r, c - 1],  // left
+      [this.vEdges[r][c + 1], r, c + 1],  // right
     ];
 
     let hasDeleted = false;
@@ -234,14 +234,14 @@ class GameState {
   getVertexDegreeInfo(r, c) {
     const C = this.cells;
     const adj = [];
-    if (c > 0)    adj.push(this.hEdges[r][c - 1]);
-    if (c < C)    adj.push(this.hEdges[r][c]);
-    if (r > 0)    adj.push(this.vEdges[r - 1][c]);
-    if (r < C)    adj.push(this.vEdges[r][c]);
+    if (c > 0) adj.push(this.hEdges[r][c - 1]);
+    if (c < C) adj.push(this.hEdges[r][c]);
+    if (r > 0) adj.push(this.vEdges[r - 1][c]);
+    if (r < C) adj.push(this.vEdges[r][c]);
     return {
       black: adj.filter(e => e === EDGE_BLACK).length,
-      gray:  adj.filter(e => e === EDGE_GRAY).length,
-      clue:  this.clues[r][c],
+      gray: adj.filter(e => e === EDGE_GRAY).length,
+      clue: this.clues[r][c],
     };
   }
 
@@ -266,28 +266,28 @@ class GameState {
   _buildBlackGraph() {
     const C = this.cells, V = C + 1, N = V * V;
     const degree = new Int32Array(N);
-    const adj    = Array.from({ length: N }, () => []);
+    const adj = Array.from({ length: N }, () => []);
 
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++)
         if (this.hEdges[r][c] === EDGE_BLACK) {
           const a = r * V + c, b = r * V + c + 1;
           adj[a].push(b); adj[b].push(a);
-          degree[a]++;    degree[b]++;
+          degree[a]++; degree[b]++;
         }
     for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++)
         if (this.vEdges[r][c] === EDGE_BLACK) {
           const a = r * V + c, b = (r + 1) * V + c;
           adj[a].push(b); adj[b].push(a);
-          degree[a]++;    degree[b]++;
+          degree[a]++; degree[b]++;
         }
     return { adj, degree, V, N };
   }
 
   /** Partition non-isolated vertices into connected components. */
   _findComponents(adj, degree, N) {
-    const visited    = new Uint8Array(N);
+    const visited = new Uint8Array(N);
     const components = [];
     for (let start = 0; start < N; start++) {
       if (degree[start] === 0 || visited[start]) continue;
@@ -323,9 +323,8 @@ class GameState {
    * are completely fine — only cycles in the cell-path graph are errors.
    */
   getErrorCellSet() {
-    // In closed mode: only flag cycles while gray edges remain (a full cycle IS the win).
-    // In open mode: any cycle is always wrong (the solution must be a non-looping path).
-    if (!this.openMode && !this.hasGrayEdges()) return new Set();
+    // In closed mode: no errors if the puzzle is solved or all edges decided.
+    if (!this.openMode && (this.checkWin() || !this.hasGrayEdges())) return new Set();
 
     const C = this.cells;
     const { adj, N } = this._buildDoorwayGraph();
@@ -335,8 +334,8 @@ class GameState {
 
     for (let start = 0; start < N; start++) {
       if (adj[start].length === 0 || visited[start]) continue;
-      const comp  = [];
-      let   edges = 0;
+      const comp = [];
+      let edges = 0;
       const queue = [start];
       visited[start] = 1;
       while (queue.length) {
@@ -363,23 +362,23 @@ class GameState {
    * and return { adj, degree, N, ck }.
    */
   _buildDoorwayGraph() {
-    const C  = this.cells;
-    const N  = C * C;
+    const C = this.cells;
+    const N = C * C;
     const ck = (r, c) => r * C + c;
     const degree = new Int32Array(N);
-    const adj    = Array.from({ length: N }, () => []);
+    const adj = Array.from({ length: N }, () => []);
 
     for (let r = 1; r < C; r++)
       for (let c = 0; c < C; c++)
         if (this.hEdges[r][c] === EDGE_NONE) {
-          adj[ck(r-1,c)].push(ck(r,c)); adj[ck(r,c)].push(ck(r-1,c));
-          degree[ck(r-1,c)]++;          degree[ck(r,c)]++;
+          adj[ck(r - 1, c)].push(ck(r, c)); adj[ck(r, c)].push(ck(r - 1, c));
+          degree[ck(r - 1, c)]++; degree[ck(r, c)]++;
         }
     for (let r = 0; r < C; r++)
       for (let c = 1; c < C; c++)
         if (this.vEdges[r][c] === EDGE_NONE) {
-          adj[ck(r,c-1)].push(ck(r,c)); adj[ck(r,c)].push(ck(r,c-1));
-          degree[ck(r,c-1)]++;          degree[ck(r,c)]++;
+          adj[ck(r, c - 1)].push(ck(r, c)); adj[ck(r, c)].push(ck(r, c - 1));
+          degree[ck(r, c - 1)]++; degree[ck(r, c)]++;
         }
     return { adj, degree, N, ck };
   }
@@ -387,8 +386,11 @@ class GameState {
   /**
    * Returns true when the puzzle is solved.
    *
-   * Closed mode: no gray edges, doorway graph is exactly one closed cycle
-   *   (every path cell has exactly two doorways).
+   * Closed mode: the NONE (doorway) edges form exactly one closed cycle
+   *   (every path cell has exactly two doorways) and every vertex clue is
+   *   consistent — treating any remaining GRAY edges as BLACK (walls).
+   *   The player does NOT need to manually mark every wall edge; finding
+   *   the correct loop path is sufficient.
    *
    * Open mode: no gray edges, doorway graph is a single simple path whose
    *   endpoints are the cells adjacent to entry and exit.
@@ -396,13 +398,11 @@ class GameState {
    *    all other path cells have degree 2.)
    */
   checkWin() {
-    if (this.hasGrayEdges()) return false;
-
     const { adj, degree, N, ck } = this._buildDoorwayGraph();
 
     // Find connected components of the doorway graph.
     const visited = new Uint8Array(N);
-    const comps   = [];
+    const comps = [];
     for (let start = 0; start < N; start++) {
       if (degree[start] === 0 || visited[start]) continue;
       const verts = [];
@@ -417,9 +417,14 @@ class GameState {
     }
 
     if (!this.openMode) {
-      // Closed: one component, all cells have degree 2 (single closed loop).
-      return comps.length === 1 && comps[0].every(v => degree[v] === 2);
+      // Closed: one component, all path cells have degree 2 (single closed loop).
+      if (comps.length !== 1 || !comps[0].every(v => degree[v] === 2)) return false;
+      // All vertex clues must be satisfied, treating GRAY edges as BLACK.
+      return this._allCluesSatisfiedAssumeGrayIsBlack();
     }
+
+    // Open mode still requires all edges decided.
+    if (this.hasGrayEdges()) return false;
 
     // Open: one component, exactly two cells have degree 1 (the endpoints),
     //       all others degree 2, and the endpoints are the entry/exit cells.
@@ -436,7 +441,29 @@ class GameState {
     const eIdx = ck(eCell.r, eCell.c);
     const xIdx = ck(xCell.r, xCell.c);
     return (leaves[0] === eIdx && leaves[1] === xIdx) ||
-           (leaves[0] === xIdx && leaves[1] === eIdx);
+      (leaves[0] === xIdx && leaves[1] === eIdx);
+  }
+
+  /**
+   * Check that every vertex clue is satisfied when GRAY edges are treated
+   * as BLACK (walls).  For each clue vertex, the number of non-NONE
+   * adjacent edges must equal the clue value.
+   */
+  _allCluesSatisfiedAssumeGrayIsBlack() {
+    const C = this.cells;
+    for (let r = 1; r < C; r++) {
+      for (let c = 1; c < C; c++) {
+        const clue = this.clues[r][c];
+        if (clue === null) continue;
+        let walls = 0;
+        if (this.hEdges[r][c - 1] !== EDGE_NONE) walls++;
+        if (this.hEdges[r][c] !== EDGE_NONE) walls++;
+        if (this.vEdges[r - 1][c] !== EDGE_NONE) walls++;
+        if (this.vEdges[r][c] !== EDGE_NONE) walls++;
+        if (walls !== clue) return false;
+      }
+    }
+    return true;
   }
 
   // ── Clues ────────────────────────────────────────────────────────────────
