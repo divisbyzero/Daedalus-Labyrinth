@@ -37,12 +37,15 @@ function updateStatus() {
   if (state.checkWin()) {
     statusMsg.textContent = 'Solved!';
     statusMsg.style.color = '#3A6B4F';
+    statusMsg.style.background = 'rgba(58, 107, 79, 0.15)';
   } else if (state.getErrorCellSet().size > 0) {
     statusMsg.textContent = 'Loop in labyrinth path — fix it';
-    statusMsg.style.color = '#A85A40';
+    statusMsg.style.color = '#C47058';
+    statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
   } else {
     statusMsg.textContent = '';
     statusMsg.style.color = '';
+    statusMsg.style.background = '';
   }
 }
 
@@ -102,6 +105,7 @@ btnReset.addEventListener('click', () => {
 btnShowSolution.addEventListener('click', () => {
   statusMsg.textContent = 'Solving…';
   statusMsg.style.color = '';
+  statusMsg.style.background = '';
   requestAnimationFrame(() => {
     const clueGrid = buildClueGridFromState(state);
     const solved = state.openMode
@@ -109,7 +113,8 @@ btnShowSolution.addEventListener('click', () => {
       : findOneSolution(clueGrid, state.cells);
     if (!solved) {
       statusMsg.textContent = 'No solution found for current clues.';
-      statusMsg.style.color = '#A85A40';
+      statusMsg.style.color = '#C47058';
+      statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
       return;
     }
     applySolvedEdgesToState(state, solved);
@@ -124,6 +129,7 @@ function doGenerate() {
   const diff = parseInt(genDiff.value, 10);
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';
+  statusMsg.style.background = '';
   requestAnimationFrame(() => {
     try {
       state = generatePuzzle(cells, diff);
@@ -135,9 +141,11 @@ function doGenerate() {
       renderer.resize(cells);
       redraw();
       statusMsg.textContent = '';
+      statusMsg.style.background = '';
     } catch (err) {
       statusMsg.textContent = err.message;
-      statusMsg.style.color = '#A85A40';
+      statusMsg.style.color = '#C47058';
+      statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
     }
   });
 }

@@ -8,7 +8,7 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: #9CA38F;  /* muted sage */
+  background: #3D3F38;
   color: #111;
   min-height: 100vh;
   display: flex;
@@ -25,16 +25,19 @@ header {
 }
 
 header h1 {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
   font-size: 1.5rem;
   letter-spacing: 0.05em;
+  color: #E8DCC8;
 }
 
 main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 6px;
+  padding: 12px 16px 16px;
   width: 100%;
 }
 
@@ -46,8 +49,8 @@ main {
   flex-wrap: wrap;
   justify-content: center;
   background: #ececec;
-  border: 1px solid #bbb;
-  border-radius: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  width: 100%;
   padding: 8px 16px;
 }
 
@@ -83,19 +86,12 @@ select {
   background: #f5f5f5;
 }
 
-#statusMsg {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: #333;
-  min-width: 120px;
-  text-align: center;
-}
-
 /* Canvas */
 #canvasWrapper {
   display: flex;
   justify-content: center;
   align-items: center;
+  margin-top: 6px;
 }
 
 canvas {
@@ -103,4 +99,17 @@ canvas {
   cursor: crosshair;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Status pill — shown below the board */
+#statusMsg {
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 20px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

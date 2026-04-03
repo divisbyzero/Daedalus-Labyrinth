@@ -41,8 +41,7 @@ const THEME = {
   // Colors — plain vertices
   vertexPlain: '#3A6B4F',  // match hedge green
 
-  // Entry/exit spill
-  portalSpill: 8,      // how far the path color extends outside the grid
+  // Entry/exit archway
   portalColor: '#DCCFB3', // match path color
 };
 
@@ -125,39 +124,56 @@ class Renderer {
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
   /**
-   * Draw a small rectangle of the path color spilling outward from an
-   * entry/exit gap, so the openings are visually obvious.
+   * Draw a filled semicircle (archway) extending outward from an entry/exit
+   * gap. The flat edge of the semicircle is flush with the border wall; the
+   * dome extends away from the board interior.
    */
   _drawPortalSpill(ctx, state, edge) {
     if (!edge) return;
     const C = state.cells;
     const { isH, r, c } = edge;
-    const S = THEME.cellSize;
-    const spill = THEME.portalSpill;
+    const rad = THEME.cellSize / 2;
 
-    ctx.fillStyle = THEME.portalColor;
+    let cx, cy, startAngle, endAngle, anticlockwise;
 
     if (isH) {
-      // Horizontal edge — gap runs left-right along a top/bottom row.
-      const x = this.vx(c);
+      cx = this.vx(c) + rad;
       if (r === 0) {
-        // Top border — spill upward
-        ctx.fillRect(x, this.vy(0) - spill, S, spill);
+        // Top border — dome extends upward
+        cy = this.vy(0);
+        startAngle = 0; endAngle = Math.PI; anticlockwise = true;
       } else {
-        // Bottom border — spill downward
-        ctx.fillRect(x, this.vy(C), S, spill);
+        // Bottom border — dome extends downward
+        cy = this.vy(C);
+        startAngle = 0; endAngle = Math.PI; anticlockwise = false;
       }
     } else {
-      // Vertical edge — gap runs top-bottom along a left/right column.
-      const y = this.vy(r);
+      cy = this.vy(r) + rad;
       if (c === 0) {
-        // Left border — spill leftward
-        ctx.fillRect(this.vx(0) - spill, y, spill, S);
+        // Left border — dome extends leftward
+        cx = this.vx(0);
+        startAngle = Math.PI / 2; endAngle = -Math.PI / 2; anticlockwise = true;
       } else {
-        // Right border — spill rightward
-        ctx.fillRect(this.vx(C), y, spill, S);
+        // Right border — dome extends rightward
+        cx = this.vx(C);
+        startAngle = -Math.PI / 2; endAngle = Math.PI / 2; anticlockwise = false;
       }
     }
+
+    // Fill the closed semicircle (arc + diameter)
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad, startAngle, endAngle, anticlockwise);
+    ctx.closePath();
+    ctx.fillStyle = THEME.portalColor;
+    ctx.fill();
+
+    // Stroke only the curved arc edge (no closePath → no flat-edge line)
+    ctx.beginPath();
+    ctx.arc(cx, cy, rad, startAngle, endAngle, anticlockwise);
+    ctx.strokeStyle = THEME.edgeBlack;
+    ctx.lineWidth = THEME.edgeWidthBlack;
+    ctx.lineCap = 'butt';
+    ctx.stroke();
   }
 
   _cellFill(color) {
