@@ -1,0 +1,455 @@
+'use strict';
+
+/**
+ * Puzzle generator for Daedalus's Labyrinth.
+ *
+ * Modelled after Simon Tatham's Loopy generator (loopy.c / loopgen.c):
+ *
+ *  Phase 1  Generate a random Hamiltonian cycle on the N×N cell grid via
+ *           Warnsdorff's heuristic + backtracking DFS.
+ *           (Analogous to loopgen.c generate_loop() — produces the solution
+ *           path.  Loopy uses face-colouring for a general loop; DL requires
+ *           a Hamiltonian cycle visiting all cells, so a dedicated algorithm
+ *           is used here instead.)
+ *
+ *  Phase 2  Extract vertex clues from the solution: for each interior vertex,
+ *           count its BLACK (wall) adjacent edges.
+ *           (Direct port of loopy.c add_full_clues().)
+ *
+ *  Phase 3  Greedy random clue removal: visit every clue in random order;
+ *           tentatively remove it; keep the removal only if the puzzle is
+ *           still uniquely solvable.
+ *           (Direct port of loopy.c remove_clues().)
+ *
+ *  Uniqueness testing uses constraint propagation — vertex-clue forcing and
+ *  per-cell doorway-degree forcing — with backtracking DFS that stops as soon
+ *  as a second solution is found.
+ *  (Analogous to loopy.c game_has_unique_soln() / solve_game_rec().)
+ */
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+/** Fisher-Yates shuffle — mutates arr and returns it. */
+function _shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+// ── Phase 1: Hamiltonian cycle generation ─────────────────────────────────────
+
+/**
+ * Find a random Hamiltonian cycle on the N×N cell grid.
+ *
+ * Uses Warnsdorff's heuristic (at each step prefer the unvisited neighbour
+ * with the fewest onward moves) with randomised tie-breaking and backtracking
+ * DFS.  Tries up to 8 random starting cells.
+ *
+ * Returns an array of [r, c] pairs (length N²) forming the cycle, or null.
+ */
+function findHamiltonianCycle(N) {
+  const visited = Array.from({ length: N }, () => new Uint8Array(N));
+  const path = [];
+  const DIRS = [[-1,0],[1,0],[0,-1],[0,1]];
+
+  function nbrs(r, c) {
+    const out = [];
+    for (const [dr, dc] of DIRS) {
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N) out.push([nr, nc]);
+    }
+    return out;
+  }
+
+  function wScore(r, c) {
+    let d = 0;
+    for (const [nr, nc] of nbrs(r, c)) if (!visited[nr][nc]) d++;
+    return d;
+  }
+
+  function dfs(r, c) {
+    visited[r][c] = 1;
+    path.push([r, c]);
+
+    if (path.length === N * N) {
+      const [fr, fc] = path[0];
+      if (Math.abs(r - fr) + Math.abs(c - fc) === 1) return true;
+      visited[r][c] = 0; path.pop(); return false;
+    }
+
+    const nexts = nbrs(r, c).filter(([nr, nc]) => !visited[nr][nc]);
+    _shuffle(nexts);
+    nexts.sort((a, b) => wScore(a[0], a[1]) - wScore(b[0], b[1]));
+
+    for (const [nr, nc] of nexts) if (dfs(nr, nc)) return true;
+
+    visited[r][c] = 0; path.pop(); return false;
+  }
+
+  const starts = _shuffle(
+    Array.from({ length: N * N }, (_, i) => [(i / N) | 0, i % N])
+  ).slice(0, Math.min(8, N * N));
+
+  for (const [sr, sc] of starts) {
+    for (let r = 0; r < N; r++) visited[r].fill(0);
+    path.length = 0;
+    if (dfs(sr, sc)) return path.slice();
+  }
+  return null;
+}
+
+// ── Phase 2: Extract clues from solution ─────────────────────────────────────
+
+/**
+ * Convert a Hamiltonian cycle to solution edge states.
+ *
+ * Edges shared between consecutive cycle cells → EDGE_NONE  (doorways).
+ * All other edges (internal walls + perimeter)  → EDGE_BLACK (walls).
+ *
+ * hS[r][c]  r ∈ [0..N],   c ∈ [0..N-1]
+ * vS[r][c]  r ∈ [0..N-1], c ∈ [0..N]
+ */
+function _cycleToSolution(cycle, N) {
+  const hS = Array.from({ length: N + 1 }, () => new Array(N).fill(EDGE_BLACK));
+  const vS = Array.from({ length: N },     () => new Array(N + 1).fill(EDGE_BLACK));
+
+  for (let i = 0; i < cycle.length; i++) {
+    const [r0, c0] = cycle[i];
+    const [r1, c1] = cycle[(i + 1) % cycle.length];
+    if (r0 === r1) vS[r0][Math.min(c0, c1) + 1] = EDGE_NONE;  // vertical edge
+    else           hS[Math.min(r0, r1) + 1][c0]  = EDGE_NONE;  // horizontal edge
+  }
+  return { hS, vS };
+}
+
+/**
+ * Compute the clue at every interior vertex (r, c ∈ [1..N-1]).
+ * Clue = number of BLACK (wall) adjacent edges.
+ *
+ * Returns a (N+1)×(N+1) array; interior positions hold 0..4, others null.
+ * (Includes all clue values — remove_clues will drop the unneeded ones.)
+ *
+ * Port of loopy.c add_full_clues(): for each edge on the loop boundary,
+ * increment the clue counter of the touching faces.  Here the dual
+ * transformation maps "face clue = loop-boundary edges" to
+ * "vertex clue = BLACK adjacent edges".
+ */
+function _extractAllClues(hS, vS, N) {
+  const cg = Array.from({ length: N + 1 }, () => new Array(N + 1).fill(null));
+  for (let r = 1; r < N; r++) {
+    for (let c = 1; c < N; c++) {
+      let b = 0;
+      if (hS[r][c - 1] === EDGE_BLACK) b++;
+      if (hS[r][c]     === EDGE_BLACK) b++;
+      if (vS[r - 1][c] === EDGE_BLACK) b++;
+      if (vS[r][c]     === EDGE_BLACK) b++;
+      cg[r][c] = b;
+    }
+  }
+  return cg;
+}
+
+// ── Phase 3a: Uniqueness solver ───────────────────────────────────────────────
+
+/**
+ * Count solutions consistent with clueGrid, stopping at `limit` (default 2).
+ *
+ * clueGrid  (N+1)×(N+1) array: interior positions (r,c ∈ [1..N-1]) hold an
+ *           integer clue value or null; all other positions are ignored.
+ *
+ * A solution is a complete assignment of every internal edge to EDGE_BLACK
+ * (wall) or EDGE_NONE (doorway) such that:
+ *   • every interior vertex with a clue has exactly that many BLACK edges, and
+ *   • the doorway graph (cells connected by NONE edges) forms a single
+ *     Hamiltonian cycle visiting all N² cells.
+ *
+ * Constraint propagation rules (applied in a fixed-point loop):
+ *   Rule 1 — Vertex clue forcing:
+ *     If black == clue            → all gray adjacent edges become EDGE_NONE.
+ *     If black + gray == clue     → all gray adjacent edges become EDGE_BLACK.
+ *   Rule 2 — Cell doorway-degree forcing (Hamiltonian cycle constraint):
+ *     Each cell must have exactly 2 NONE edges.
+ *     If none == 2                → all gray edges of the cell become BLACK.
+ *     If none + gray == 2         → all gray edges of the cell become NONE.
+ *
+ * When propagation reaches a fixed point with undecided edges remaining,
+ * branch on the first gray edge and recurse.
+ */
+function countSolutions(clueGrid, N, limit) {
+  if (limit === undefined) limit = 2;
+
+  // ── Edge arrays ─────────────────────────────────────────────────────────────
+  // h[r][c]: horizontal edge at vertex-row r, vertex-col c to c+1.
+  //   r ∈ [0..N], c ∈ [0..N-1].  Perimeter (r=0 or r=N): EDGE_BLACK.
+  // v[r][c]: vertical edge at vertex-col c, vertex-row r to r+1.
+  //   r ∈ [0..N-1], c ∈ [0..N].  Perimeter (c=0 or c=N): EDGE_BLACK.
+  const h = Array.from({ length: N + 1 }, (_, r) =>
+    new Array(N).fill(r === 0 || r === N ? EDGE_BLACK : EDGE_GRAY)
+  );
+  const v = Array.from({ length: N }, () => {
+    const row = new Array(N + 1).fill(EDGE_GRAY);
+    row[0] = row[N] = EDGE_BLACK;
+    return row;
+  });
+
+  // ── Constraint propagation ───────────────────────────────────────────────────
+
+  function propagate() {
+    let changed = true;
+    while (changed) {
+      changed = false;
+
+      // Rule 1: vertex clue forcing.
+      // For interior vertex (r, c) all 4 adjacent edges are always internal,
+      // so we access h/v directly without a perimeter guard.
+      for (let r = 1; r < N; r++) {
+        for (let c = 1; c < N; c++) {
+          const clue = clueGrid[r][c];
+          if (clue === null) continue;
+
+          const L  = h[r][c - 1];   // left  horizontal edge
+          const R  = h[r][c];       // right horizontal edge
+          const U  = v[r - 1][c];   // above vertical edge
+          const D  = v[r][c];       // below vertical edge
+
+          let black = 0, gray = 0;
+          if (L === EDGE_BLACK) black++; else if (L === EDGE_GRAY) gray++;
+          if (R === EDGE_BLACK) black++; else if (R === EDGE_GRAY) gray++;
+          if (U === EDGE_BLACK) black++; else if (U === EDGE_GRAY) gray++;
+          if (D === EDGE_BLACK) black++; else if (D === EDGE_GRAY) gray++;
+
+          if (black > clue || black + gray < clue) return false; // contradiction
+
+          if (gray > 0) {
+            let fv = -1;
+            if (black === clue)           fv = EDGE_NONE;
+            else if (black + gray === clue) fv = EDGE_BLACK;
+            if (fv >= 0) {
+              if (L === EDGE_GRAY) { h[r][c - 1] = fv; changed = true; }
+              if (R === EDGE_GRAY) { h[r][c]     = fv; changed = true; }
+              if (U === EDGE_GRAY) { v[r - 1][c] = fv; changed = true; }
+              if (D === EDGE_GRAY) { v[r][c]     = fv; changed = true; }
+            }
+          }
+        }
+      }
+
+      // Rule 2: cell doorway-degree forcing.
+      // Cell (r, c) has 4 edges; perimeter edges are stored as EDGE_BLACK.
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const T = h[r][c];         // top    — perimeter BLACK when r === 0
+          const B = h[r + 1][c];     // bottom — perimeter BLACK when r === N-1
+          const L = v[r][c];         // left   — perimeter BLACK when c === 0
+          const R = v[r][c + 1];     // right  — perimeter BLACK when c === N-1
+
+          let none = 0, gray = 0;
+          if (T === EDGE_NONE) none++; else if (T === EDGE_GRAY) gray++;
+          if (B === EDGE_NONE) none++; else if (B === EDGE_GRAY) gray++;
+          if (L === EDGE_NONE) none++; else if (L === EDGE_GRAY) gray++;
+          if (R === EDGE_NONE) none++; else if (R === EDGE_GRAY) gray++;
+
+          if (none > 2 || none + gray < 2) return false; // contradiction
+
+          if (gray > 0) {
+            let fv = -1;
+            if (none === 2)               fv = EDGE_BLACK;
+            else if (none + gray === 2)   fv = EDGE_NONE;
+            if (fv >= 0) {
+              if (T === EDGE_GRAY) { h[r][c]     = fv; changed = true; }
+              if (B === EDGE_GRAY) { h[r + 1][c] = fv; changed = true; }
+              if (L === EDGE_GRAY) { v[r][c]     = fv; changed = true; }
+              if (R === EDGE_GRAY) { v[r][c + 1] = fv; changed = true; }
+            }
+          }
+        }
+      }
+    }
+    // Rule 3: No premature cycle in the doorway graph.
+    // A connected component of NONE edges that forms a cycle but contains
+    // fewer than N² cells is a contradiction (partial loop, not Hamiltonian).
+    if (hasPrematureCycle()) return false;
+
+    return true; // no contradiction found
+  }
+
+  function hasPrematureCycle() {
+    const vis = new Uint8Array(N * N);
+    for (let start = 0; start < N * N; start++) {
+      if (vis[start]) continue;
+      const r0 = (start / N) | 0, c0 = start % N;
+      // Skip cells not yet connected to anything via NONE edges.
+      const hasNone = (r0 > 0   && h[r0][c0]       === EDGE_NONE) ||
+                      (r0 < N-1 && h[r0 + 1][c0]   === EDGE_NONE) ||
+                      (c0 > 0   && v[r0][c0]         === EDGE_NONE) ||
+                      (c0 < N-1 && v[r0][c0 + 1]    === EDGE_NONE);
+      if (!hasNone) continue;
+
+      let nodes = 0, edgeCount = 0;
+      const stk = [start]; vis[start] = 1;
+      while (stk.length) {
+        const u = stk.pop();
+        nodes++;
+        const r = (u / N) | 0, c = u % N;
+        if (r > 0   && h[r][c]     === EDGE_NONE) { edgeCount++; if (!vis[u-N]) { vis[u-N]=1; stk.push(u-N); } }
+        if (r < N-1 && h[r+1][c]   === EDGE_NONE) { edgeCount++; if (!vis[u+N]) { vis[u+N]=1; stk.push(u+N); } }
+        if (c > 0   && v[r][c]     === EDGE_NONE) { edgeCount++; if (!vis[u-1]) { vis[u-1]=1; stk.push(u-1); } }
+        if (c < N-1 && v[r][c+1]   === EDGE_NONE) { edgeCount++; if (!vis[u+1]) { vis[u+1]=1; stk.push(u+1); } }
+      }
+      edgeCount /= 2;
+      if (edgeCount >= nodes && nodes < N * N) return true;
+    }
+    return false;
+  }
+
+  // ── Hamiltonian cycle check ──────────────────────────────────────────────────
+
+  function isHamiltonianCycle() {
+    // Every cell must have degree 2 in the doorway graph.
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        let n = 0;
+        if (r > 0   && h[r][c]       === EDGE_NONE) n++;
+        if (r < N-1 && h[r + 1][c]   === EDGE_NONE) n++;
+        if (c > 0   && v[r][c]       === EDGE_NONE) n++;
+        if (c < N-1 && v[r][c + 1]   === EDGE_NONE) n++;
+        if (n !== 2) return false;
+      }
+    }
+
+    // The doorway graph must be connected (single cycle, not multiple loops).
+    const vis = new Uint8Array(N * N);
+    const q = [0]; vis[0] = 1; let cnt = 1;
+    while (q.length) {
+      const i = q.pop(), r = (i / N) | 0, c = i % N;
+      if (r > 0   && h[r][c]     === EDGE_NONE && !vis[i-N]) { vis[i-N]=1; cnt++; q.push(i-N); }
+      if (r < N-1 && h[r+1][c]   === EDGE_NONE && !vis[i+N]) { vis[i+N]=1; cnt++; q.push(i+N); }
+      if (c > 0   && v[r][c]     === EDGE_NONE && !vis[i-1]) { vis[i-1]=1; cnt++; q.push(i-1); }
+      if (c < N-1 && v[r][c+1]   === EDGE_NONE && !vis[i+1]) { vis[i+1]=1; cnt++; q.push(i+1); }
+    }
+    return cnt === N * N;
+  }
+
+  // ── Backtracking search ──────────────────────────────────────────────────────
+
+  // Save and restore h/v arrays in-place (no reference replacement, so outer
+  // snaps remain independent of inner modifications).
+  function snap() {
+    return { h: h.map(r => r.slice()), v: v.map(r => r.slice()) };
+  }
+  function restore(s) {
+    for (let i = 0; i < h.length; i++)
+      for (let j = 0; j < h[i].length; j++) h[i][j] = s.h[i][j];
+    for (let i = 0; i < v.length; i++)
+      for (let j = 0; j < v[i].length; j++) v[i][j] = s.v[i][j];
+  }
+
+  function findGray() {
+    for (let r = 1; r < N; r++)
+      for (let c = 0; c < N; c++)
+        if (h[r][c] === EDGE_GRAY) return [true,  r, c];
+    for (let r = 0; r < N; r++)
+      for (let c = 1; c < N; c++)
+        if (v[r][c] === EDGE_GRAY) return [false, r, c];
+    return null;
+  }
+
+  function search(count) {
+    if (!propagate()) return count;
+
+    const gray = findGray();
+    if (!gray) return isHamiltonianCycle() ? count + 1 : count;
+
+    const [isH, r, c] = gray;
+    const s = snap();
+
+    // Branch 1: set this edge BLACK (wall)
+    if (isH) h[r][c] = EDGE_BLACK; else v[r][c] = EDGE_BLACK;
+    count = search(count);
+    if (count >= limit) { restore(s); return count; }
+
+    // Branch 2: set this edge NONE (doorway)
+    restore(s);
+    if (isH) h[r][c] = EDGE_NONE; else v[r][c] = EDGE_NONE;
+    count = search(count);
+
+    restore(s);
+    return count;
+  }
+
+  return search(0);
+}
+
+function hasUniqueSolution(clueGrid, N) {
+  return countSolutions(clueGrid, N, 2) === 1;
+}
+
+// ── Phase 3b: Greedy clue removal ─────────────────────────────────────────────
+
+/**
+ * Remove redundant clues in random order, keeping only those required for
+ * uniqueness.  Modifies clueGrid in-place.
+ *
+ * Direct port of loopy.c remove_clues():
+ *   shuffle the face list, then for each face tentatively remove its clue
+ *   and call game_has_unique_soln(); restore if uniqueness is lost.
+ */
+function _removeRedundantClues(clueGrid, N) {
+  const positions = [];
+  for (let r = 1; r < N; r++)
+    for (let c = 1; c < N; c++)
+      positions.push([r, c]);
+  _shuffle(positions);
+
+  for (const [r, c] of positions) {
+    if (clueGrid[r][c] === null) continue;
+    const saved = clueGrid[r][c];
+    clueGrid[r][c] = null;
+    if (!hasUniqueSolution(clueGrid, N)) clueGrid[r][c] = saved;
+  }
+}
+
+// ── Full pipeline ──────────────────────────────────────────────────────────────
+
+/**
+ * Generate a random DL puzzle with `cells` cells per side.
+ *
+ * Pipeline (modelled on loopy.c new_game_desc()):
+ *   1. Find a random Hamiltonian cycle        → the solution path
+ *   2. Derive all vertex clues from it        → add_full_clues equivalent
+ *   3. Remove redundant clues while unique    → remove_clues equivalent
+ *   4. Build and return a GameState with the minimal clue set loaded.
+ *
+ * Returns a configured GameState; all internal edges start as EDGE_GRAY
+ * (undecided) — the player must deduce the solution.
+ * Throws on the very rare failure to find a Hamiltonian cycle.
+ */
+function generatePuzzle(cells) {
+  const N = cells;
+
+  // Phase 1 — Hamiltonian cycle
+  let cycle = null;
+  for (let attempt = 0; attempt < 5 && !cycle; attempt++)
+    cycle = findHamiltonianCycle(N);
+  if (!cycle) throw new Error(`Could not find a Hamiltonian cycle for ${N}×${N}.`);
+
+  // Phase 2 — Solution edges + full clue set
+  const { hS, vS } = _cycleToSolution(cycle, N);
+  const clueGrid   = _extractAllClues(hS, vS, N);
+
+  // Phase 3 — Remove redundant clues (Loopy's remove_clues)
+  _removeRedundantClues(clueGrid, N);
+
+  // Build GameState
+  const clues = [];
+  for (let r = 1; r < N; r++)
+    for (let c = 1; c < N; c++)
+      if (clueGrid[r][c] !== null)
+        clues.push({ r, c, value: clueGrid[r][c] });
+
+  const state = new GameState(N);
+  state.loadClues(clues);
+  return state;
+}

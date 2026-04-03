@@ -11,6 +11,8 @@ const statusMsg     = document.getElementById('statusMsg');
 const loopyInput    = document.getElementById('loopyInput');
 const btnLoad       = document.getElementById('btnLoad');
 const importError   = document.getElementById('importError');
+const genSize       = document.getElementById('genSize');
+const btnGenerate   = document.getElementById('btnGenerate');
 
 // ── App state ─────────────────────────────────────────────────────────────────
 
@@ -36,10 +38,10 @@ function redraw() {
 
 function updateStatus() {
   if (state.checkWin()) {
-    statusMsg.textContent = '🎉 Solved!';
+    statusMsg.textContent = 'Solved!';
     statusMsg.style.color = '#228833';
   } else if (state.getErrorCellSet().size > 0) {
-    statusMsg.textContent = 'Premature loop in labyrinth path';
+    statusMsg.textContent = 'Loop in labyrinth path — fix it';
     statusMsg.style.color = '#cc2222';
   } else {
     statusMsg.textContent = '';
@@ -76,14 +78,33 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 btnUndo.addEventListener('click', () => { state.undo(); redraw(); });
 btnRedo.addEventListener('click', () => { state.redo(); redraw(); });
 btnReset.addEventListener('click', () => {
+  // reset() preserves clues and re-opens entry/exit automatically.
   state.reset();
-  // Re-apply clues (reset clears the board but we keep the clue set)
-  const def = PUZZLES[puzzleSelect.value];
-  if (def) state.loadClues(def.clues);
   redraw();
 });
 
 puzzleSelect.addEventListener('change', () => initPuzzle(puzzleSelect.value));
+
+// ── Generate ──────────────────────────────────────────────────────────────────
+
+btnGenerate.addEventListener('click', () => {
+  const cells = parseInt(genSize.value, 10);
+  statusMsg.textContent = 'Generating…';
+  statusMsg.style.color = '';
+  // Defer one frame so the browser can repaint the status before the DFS runs.
+  requestAnimationFrame(() => {
+    try {
+      state    = generatePuzzle(cells);
+      renderer = renderer || new Renderer(canvas);
+      renderer.resize(cells);
+      redraw();
+      statusMsg.textContent = '';
+    } catch (err) {
+      statusMsg.textContent = err.message;
+      statusMsg.style.color = '#cc2222';
+    }
+  });
+});
 
 // ── Loopy import ──────────────────────────────────────────────────────────────
 
@@ -96,9 +117,10 @@ function loadFromLoopyString(raw) {
   }
   state = new GameState(result.cells);
   state.loadClues(result.clues);
+  if (result.entry && result.exit) state.setEntryExit(result.entry, result.exit);
   renderer.resize(result.cells);
   redraw();
-  statusMsg.textContent = `${result.cells}×${result.cells} puzzle loaded.`;
+  statusMsg.textContent = '';
 }
 
 btnLoad.addEventListener('click', () => loadFromLoopyString(loopyInput.value));

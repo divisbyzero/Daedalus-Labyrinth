@@ -23,6 +23,7 @@ class Renderer {
 
   /** Resize the canvas to fit a board with `cells` cells per side. */
   resize(cells) {
+    this._lastCells = cells;
     const total = this.MARGIN * 2 + cells * this.CELL;
     const dpr   = this.dpr;
     this.canvas.width        = total * dpr;
@@ -69,6 +70,10 @@ class Renderer {
         this._drawVertex(ctx, state, r, c);
       }
     }
+
+    // 4. Entry / exit markers in the margin
+    if (state.entry) this._drawPortal(ctx, state.entry, 'IN',  '#228833');
+    if (state.exit)  this._drawPortal(ctx, state.exit,  'OUT', '#cc5500');
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
@@ -164,6 +169,64 @@ class Renderer {
       ctx.fillStyle = '#111111';
       ctx.fill();
     }
+  }
+
+  // ── Entry / exit markers ─────────────────────────────────────────────────
+
+  /**
+   * Draw a small coloured label ("IN" or "OUT") in the margin just outside
+   * the perimeter gap created by entry or exit.
+   *
+   * edge: { isH, r, c }  — the deleted perimeter edge
+   * label: string        — text to draw
+   * color: CSS colour string
+   */
+  _drawPortal(ctx, edge, label, color) {
+    const { isH, r, c } = edge;
+    const C   = this._lastCells;   // set in resize()
+    const PAD = 10;                // pixels from grid edge into margin
+
+    let x, y, arrowDx, arrowDy;
+
+    if (isH) {
+      // Horizontal perimeter edge — entry/exit is on top (r=0) or bottom (r=C)
+      x = this.vx(c) + this.CELL / 2;
+      if (r === 0) {
+        y      = this.vy(0) - PAD;
+        arrowDy =  1; arrowDx = 0;  // arrow points downward (into board)
+      } else {
+        y      = this.vy(C) + PAD;
+        arrowDy = -1; arrowDx = 0;  // arrow points upward (into board)
+      }
+    } else {
+      // Vertical perimeter edge — entry/exit is on left (c=0) or right (c=C)
+      y = this.vy(r) + this.CELL / 2;
+      if (c === 0) {
+        x      = this.vx(0) - PAD;
+        arrowDx =  1; arrowDy = 0;  // arrow points right (into board)
+      } else {
+        x      = this.vx(C) + PAD;
+        arrowDx = -1; arrowDy = 0;  // arrow points left (into board)
+      }
+    }
+
+    // Small filled triangle (arrow head pointing into the board)
+    const AS = 7; // arrow size
+    ctx.beginPath();
+    ctx.moveTo(x + arrowDx * AS,                   y + arrowDy * AS);
+    ctx.lineTo(x - arrowDx * AS + arrowDy * AS,    y - arrowDy * AS + arrowDx * AS);
+    ctx.lineTo(x - arrowDx * AS - arrowDy * AS,    y - arrowDy * AS - arrowDx * AS);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Label text offset away from the board
+    ctx.fillStyle    = color;
+    ctx.font         = 'bold 10px sans-serif';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    const textOffset = 14;
+    ctx.fillText(label, x - arrowDx * textOffset, y - arrowDy * textOffset);
   }
 
   // ── Hit detection ─────────────────────────────────────────────────────────

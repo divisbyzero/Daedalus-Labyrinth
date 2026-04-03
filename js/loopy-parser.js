@@ -67,5 +67,7 @@ function parseLoopyString(raw) {
     }
   }
 
-  return { cells: W + 1, clues };
+  // entry/exit are null: Loopy-derived puzzles use closed-loop mode.
+  // Open-mode puzzles need purpose-built generation (Phase 6).
+  return { cells: W + 1, clues, entry: null, exit: null };
 }
