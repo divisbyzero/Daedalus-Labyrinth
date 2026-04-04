@@ -6,7 +6,7 @@
 const THEME = {
   // Layout
   cellSize: 60,       // logical pixels per cell
-  margin: 36,        // padding around the grid
+  margin: 42,        // padding around the grid (must be ≥ cellSize/2 × portalRadiusScale)
   hitTolerance: 14,     // edge click detection radius (px)
 
   // Vertex sizes
@@ -43,6 +43,7 @@ const THEME = {
 
   // Entry/exit archway
   portalColor: '#DCCFB3', // match path color
+  portalRadiusScale: 1.25, // semicircle radius as a multiple of half the door width
 };
 
 /**
@@ -170,12 +171,13 @@ class Renderer {
     if (!edge) return;
     const C = state.cells;
     const { isH, r, c } = edge;
-    const rad = THEME.cellSize / 2;
+    const rad = (THEME.cellSize / 2) * THEME.portalRadiusScale;
 
     let cx, cy, startAngle, endAngle, anticlockwise;
 
     if (isH) {
-      cx = this.vx(c) + rad;
+      // Center x is always the midpoint of the door opening, not a function of rad.
+      cx = this.vx(c) + THEME.cellSize / 2;
       if (r === 0) {
         // Top border — dome extends upward
         cy = this.vy(0);
@@ -186,7 +188,8 @@ class Renderer {
         startAngle = 0; endAngle = Math.PI; anticlockwise = false;
       }
     } else {
-      cy = this.vy(r) + rad;
+      // Center y is always the midpoint of the door opening, not a function of rad.
+      cy = this.vy(r) + THEME.cellSize / 2;
       if (c === 0) {
         // Left border — dome extends leftward
         cx = this.vx(0);
