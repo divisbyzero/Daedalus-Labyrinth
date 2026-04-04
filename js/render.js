@@ -121,7 +121,7 @@ class Renderer {
     }
 
     // 5. "Solved!" overlay — drawn last so it appears above everything
-    if (state.checkWin()) {
+    if (state.checkWin() && !state.cheated) {
       this._drawSolvedOverlay(ctx, C);
     }
   }

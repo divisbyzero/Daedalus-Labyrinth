@@ -37,6 +37,9 @@ class GameState {
     this.entry = null;
     this.exit = null;
 
+    // Set to true when the solution is revealed via Show Solution.
+    this.cheated = false;
+
     // Undo / redo stacks — each entry: { isH, r, c, from, to }
     this._undoStack = [];
     this._redoStack = [];

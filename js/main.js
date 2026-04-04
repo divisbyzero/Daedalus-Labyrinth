@@ -107,6 +107,7 @@ btnShowSolution.addEventListener('click', () => {
       statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
       return;
     }
+    state.cheated = true;
     applySolvedEdgesToState(state, solved);
     redraw();
   });
