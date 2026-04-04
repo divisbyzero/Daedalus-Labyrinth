@@ -44,6 +44,10 @@ const THEME = {
   // Entry/exit archway
   portalColor: '#DCCFB3', // match path color
   portalRadiusScale: 1.25, // semicircle radius as a multiple of half the door width
+
+  // Exit markers
+  exitGold: '#7A9BB5',        // warm gold for exit gap framing
+  exitLineWidth: 2,           // thin marker line across the gap
 };
 
 /**
@@ -108,12 +112,6 @@ class Renderer {
     this._drawAllEdges(state, EDGE_GRAY);
     this._drawAllEdges(state, EDGE_BLACK);
 
-    // 3. Entry / exit path spill (below vertices)
-    if (state.openMode) {
-      this._drawPortalSpill(ctx, state, state.entry);
-      this._drawPortalSpill(ctx, state, state.exit);
-    }
-
     // 4. Vertices (on top of everything)
     for (let r = 0; r <= C; r++) {
       for (let c = 0; c <= C; c++) {
@@ -121,7 +119,13 @@ class Renderer {
       }
     }
 
-    // 5. "Solved!" overlay — drawn last so it appears above everything
+    // 5. Exit markers — drawn after vertices so gold dots appear on top
+    if (state.openMode) {
+      this._drawExitMarker(ctx, state, state.entry);
+      this._drawExitMarker(ctx, state, state.exit);
+    }
+
+    // 6. "Solved!" overlay — drawn last so it appears above everything
     if (state.checkWin() && !state.cheated) {
       this._drawSolvedOverlay(ctx, C);
     }
@@ -160,6 +164,42 @@ class Renderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, cx, cy);
+  }
+
+  /**
+   * Draw the golden gate marker at an entry/exit gap:
+   * a thin gold line spanning the gap, and gold dots at both framing vertices.
+   */
+  _drawExitMarker(ctx, state, edge) {
+    if (!edge) return;
+    const { isH, r, c } = edge;
+
+    let x1, y1, x2, y2;
+    if (isH) {
+      x1 = this.vx(c); y1 = this.vy(r);
+      x2 = this.vx(c + 1); y2 = this.vy(r);
+    } else {
+      x1 = this.vx(c); y1 = this.vy(r);
+      x2 = this.vx(c); y2 = this.vy(r + 1);
+    }
+
+    // Thin gold line across the gap
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = THEME.exitGold;
+    ctx.lineWidth = THEME.exitLineWidth;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Gold dots at the two framing vertices (overdraw the default green dots)
+    const R = THEME.vertexRadiusPlain;
+    ctx.fillStyle = THEME.exitGold;
+    for (const [x, y] of [[x1, y1], [x2, y2]]) {
+      ctx.beginPath();
+      ctx.arc(x, y, R, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   /**
