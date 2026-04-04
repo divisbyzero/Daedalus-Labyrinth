@@ -192,9 +192,9 @@ class Renderer {
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
-  _drawSolvedOverlay(ctx, C, timeStr, solvedAt) {
-    const cx = THEME.margin + C * THEME.cellSize / 2;
-    const cy = THEME.margin + C * THEME.cellSize / 2;
+  _drawSolvedOverlay(ctx, gridSize, timeStr, solvedAt) {
+    const cx = THEME.margin + gridSize * THEME.cellSize / 2;
+    const cy = THEME.margin + gridSize * THEME.cellSize / 2;
 
     // Ease-out scale animation: 0.82 → 1.0 over 350ms
     const ANIM_MS = 350;
@@ -238,7 +238,7 @@ class Renderer {
     ctx.fillStyle = 'rgba(244, 241, 232, 0.97)';
     ctx.fill();
 
-    ctx.fillStyle = C.solvedAccent;
+    ctx.fillStyle = C.background;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -251,7 +251,7 @@ class Renderer {
     if (timeStr) {
       const timeY = solvedY + fontSize / 2 + lineGap + timeFontSize / 2;
       ctx.font = `${timeFontSize}px sans-serif`;
-      ctx.fillStyle = C.numberInk;
+      ctx.fillStyle = C.background;
       ctx.fillText(timeStr, 0, timeY);
     }
 
