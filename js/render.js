@@ -45,7 +45,7 @@ const THEME = {
   cellPath: C.regionCompleted,
   cellEnclosed: C.regionEnclosed,
   cellThreeSides: C.regionThreeSides,
-  cellError: `rgba(209, 73, 63, 0.38)`, // errorRed overlay — strong enough to read at a glance
+  cellError: C.errorRed,               // solid red — no bleed-through from underlying cell colour
 
   // Colors — edges
   edgeBlack: C.hedge,
@@ -123,12 +123,12 @@ class Renderer {
     const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
-        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
         if (errorCells.has(`${r},${c}`)) {
           ctx.fillStyle = THEME.cellError;
-          ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
+        } else {
+          ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
         }
+        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
       }
     }
 
