@@ -87,6 +87,7 @@ function startTimer() {
   timerDone = false;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
+  if (state) state.solvedTime = null;
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     timerDisplay.textContent = formatTime(elapsed);
@@ -105,8 +106,9 @@ function markTimerSolved() {
   timerDone = true;
   stopTimer();
   const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-  timerDisplay.textContent = `Solved in ${formatTime(elapsed)}`;
-  timerDisplay.classList.add('timer-solved');
+  timerDisplay.textContent = formatTime(elapsed);
+  state.solvedTime = formatTime(elapsed);
+  redraw(); // re-render so the overlay picks up the time
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

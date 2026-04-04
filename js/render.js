@@ -129,26 +129,33 @@ class Renderer {
 
     // 6. "Solved!" overlay — drawn last so it appears above everything
     if (state.checkWin() && !state.cheated) {
-      this._drawSolvedOverlay(ctx, C);
+      this._drawSolvedOverlay(ctx, C, state.solvedTime || null);
     }
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
-  _drawSolvedOverlay(ctx, C) {
+  _drawSolvedOverlay(ctx, C, timeStr) {
     const cx = THEME.margin + C * THEME.cellSize / 2;
     const cy = THEME.margin + C * THEME.cellSize / 2;
+
     const fontSize = Math.round(THEME.cellSize * 0.9);
+    const timeFontSize = Math.round(THEME.cellSize * 0.4);
+    const lineGap = Math.round(fontSize * 0.22);
+
     ctx.font = `bold ${fontSize}px sans-serif`;
-    const text = 'Solved!';
-    const textW = ctx.measureText(text).width;
+    const solvedW = ctx.measureText('Solved!').width;
+    ctx.font = `${timeFontSize}px sans-serif`;
+    const timeW = timeStr ? ctx.measureText(timeStr).width : 0;
+
     const padX = fontSize * 0.6;
-    const padY = fontSize * 0.4;
-    const bw = textW + padX * 2;
-    const bh = fontSize + padY * 2;
+    const padY = fontSize * 0.35;
+    const contentH = fontSize + (timeStr ? lineGap + timeFontSize : 0);
+    const bw = Math.max(solvedW, timeW) + padX * 2;
+    const bh = contentH + padY * 2;
     const bx = cx - bw / 2;
     const by = cy - bh / 2;
-    const r = bh / 2;
+    const r = Math.min(bh / 2, 28);
 
     // Pill background
     ctx.beginPath();
@@ -161,11 +168,21 @@ class Renderer {
     ctx.fillStyle = 'rgba(242, 237, 228, 0.93)';
     ctx.fill();
 
-    // Text
     ctx.fillStyle = THEME.edgeBlack;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, cx, cy);
+
+    // "Solved!" — vertically centered in upper portion
+    const solvedY = by + padY + fontSize / 2;
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.fillText('Solved!', cx, solvedY);
+
+    // Time — smaller, below
+    if (timeStr) {
+      const timeY = solvedY + fontSize / 2 + lineGap + timeFontSize / 2;
+      ctx.font = `${timeFontSize}px sans-serif`;
+      ctx.fillText(timeStr, cx, timeY);
+    }
   }
 
   /**
