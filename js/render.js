@@ -7,21 +7,39 @@
 // Single source of truth for all canvas colors. Mirror any UI-facing colors
 // in CSS variables in style.css so both stay in sync.
 const C = {
+  // Board surfaces
   background: '#2F3A34', // deep muted green-gray — page & canvas bg
   boardSurface: '#F4F1E8', // warm parchment — undetermined cells
-  gridLine: '#C8C3B6', // light neutral — undecided edge guides
+  // Structural
+  gridLine: '#C9C2B4', // light neutral — undecided grid guides
   hedge: '#2E6F57', // rich green — placed hedges
-  regionCompleted: '#E8D9B5', // warm parchment tint — path cells (more visible vs board)
-  regionEnclosed: '#3E5A4F', // dark muted green — four-edge enclosed squares
-  regionThreeSides: '#C8C3B6', // same neutral as grid for three-sided cells
-  numberInk: '#2A2A2A', // near-black — clue numbers
-  errorRed: '#D1493F',          // warm red-orange — violations & error vertices
-  errorFill: '#D1493F44',      // translucent red — error region overlay
-  errorStroke: '#D1493F88',    // semi-transparent red — error region perimeter
-  errorVertexStroke: '#A7342D', // deep red — ring on violated vertices
-  vertexDot: '#7A8F84', // mid-tone — plain dots, subtler than hedges
+  regionCompleted: '#E6D8AE', // warm earth tint — path cells
+  regionEnclosed: '#466056', // softened dark green — blocked/enclosed cells
+  regionThreeSides: '#C9C2B4', // matches grid line — three-sided cells
+  // Error
+  errorRed: '#D1493F',   // warm red — violated vertices
+  errorFill: '#D97C7440', // translucent warm red — error region overlay
+  errorStroke: '#C85C5488', // semi-transparent — error region perimeter
+  errorVertexStroke: '#A7342D',   // deep red ring — on violated vertices
+  errorVertexText: '#FFF8F6',   // near-white — text inside error circles
+  // Normal clue circles (progress state)
+  clueNormalFill: '#F4F1E8', // parchment — circle fill
+  clueNormalBorder: '#2E6F57', // hedge green — circle ring
+  clueNormalText: '#2B3A34', // near-black — number text
+  // Clue circles on dark (blocked/enclosed) cells
+  clueOnDarkFill: '#F1EEE4', // slightly warm white
+  clueOnDarkBorder: '#274F41', // deep green ring
+  clueOnDarkText: '#22302B', // near-black on dark bg
+  // Vertex / dot
+  numberInk: '#2B3A34', // near-black — general ink
+  vertexDot: '#7E978D', // mid-tone — plain vertex dots
   vertexSatisfiedRing: '#1F5A43', // dark green ring — satisfied vertex border
-  solvedAccent: '#1F5A43', // deep rich green — Solved! overlay text
+  // Solved overlay
+  solvedOverlayBg: '#F2EDE2F2', // warm parchment w/ slight transparency
+  solvedOverlayBorder: '#D8D0C0',   // muted warm border
+  solvedHeadingText: '#2B3A34',   // dark — "Solved!" heading
+  solvedTimeText: '#31443C',   // dark green-tinted — elapsed time
+  // Misc
   exitAccent: '#7A9BB5', // steel blue — exit markers
 };
 
@@ -47,24 +65,38 @@ const THEME = {
   cellPath: C.regionCompleted,
   cellEnclosed: C.regionEnclosed,
   cellThreeSides: C.regionThreeSides,
-  cellError: C.errorFill,              // translucent red overlay — underlying cell colour shows through
+  cellError: C.errorFill,        // translucent overlay — base cell colour visible beneath
+  cellErrorStroke: C.errorStroke,      // error region perimeter
 
   // Colors — edges
   edgeBlack: C.hedge,
   edgeGray: C.gridLine,
 
-  // Colors — numbered vertices
-  vertexProgress: C.hedge,             // clue not yet met
-  vertexSatisfied: C.regionCompleted,   // clue exactly met — light fill
-  vertexSatisfiedRing: C.vertexSatisfiedRing, // distinct dark border on satisfied
-  vertexViolated: C.errorRed,          // clue impossible / exceeded
-  vertexViolatedRing: C.errorVertexStroke, // deep red ring on violated vertices
-  vertexRing: '#FFFFFF00',             // transparent — no ring on progress vertices
-  vertexText: C.boardSurface,
-  vertexTextSatisfied: C.numberInk,   // dark ink on light satisfied bg
+  // Colors — numbered vertices — progress (normal) state
+  vertexProgress: C.clueNormalFill,   // parchment fill — not yet met
+  vertexProgressRing: C.clueNormalBorder, // hedge green ring
+  vertexText: C.clueNormalText,   // dark text on parchment
+  // satisfied state
+  vertexSatisfied: C.regionCompleted,  // light earthy fill — exact match
+  vertexSatisfiedRing: C.vertexSatisfiedRing,
+  vertexTextSatisfied: C.numberInk,
+  // violated state
+  vertexViolated: C.errorRed,
+  vertexViolatedRing: C.errorVertexStroke,
+  vertexErrorText: C.errorVertexText,  // near-white text on red
+  // clue on dark (enclosed) cell
+  vertexOnDarkFill: C.clueOnDarkFill,
+  vertexOnDarkBorder: C.clueOnDarkBorder,
+  vertexOnDarkText: C.clueOnDarkText,
 
   // Colors — plain vertices
   vertexPlain: C.vertexDot,
+
+  // Solved overlay
+  solvedOverlayBg: C.solvedOverlayBg,
+  solvedOverlayBorder: C.solvedOverlayBorder,
+  solvedHeadingText: C.solvedHeadingText,
+  solvedTimeText: C.solvedTimeText,
 
   // Entry/exit archway
   portalColor: C.regionCompleted,
@@ -140,7 +172,7 @@ class Renderer {
     //     This avoids double-stroking interior shared edges, which created
     //     spurious thick lines inside the region.
     if (errorCells.size > 0) {
-      ctx.strokeStyle = C.errorStroke;
+      ctx.strokeStyle = THEME.cellErrorStroke;
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -238,10 +270,14 @@ class Renderer {
     ctx.arcTo(bx, by + bh, bx, by, r);
     ctx.arcTo(bx, by, bx + bw, by, r);
     ctx.closePath();
-    ctx.fillStyle = '#F4F1E8F8';
+    ctx.fillStyle = THEME.solvedOverlayBg;
     ctx.fill();
+    // Soft border
+    ctx.strokeStyle = THEME.solvedOverlayBorder;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-    ctx.fillStyle = C.background;
+    ctx.fillStyle = THEME.solvedHeadingText;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -254,7 +290,7 @@ class Renderer {
     if (timeStr) {
       const timeY = solvedY + fontSize / 2 + lineGap + timeFontSize / 2;
       ctx.font = `${timeFontSize}px sans-serif`;
-      ctx.fillStyle = C.background;
+      ctx.fillStyle = THEME.solvedTimeText;
       ctx.fillText(timeStr, 0, timeY);
     }
 
@@ -432,48 +468,57 @@ class Renderer {
   _drawVertex(ctx, state, r, c) {
     const x = this.vx(c);
     const y = this.vy(r);
-    const C = state.cells;
+    const gridSize = state.cells;
 
     // Perimeter vertices sit on fixed boundary edges — they never get clue numbers.
-    const isPerimeter = (r === 0 || r === C || c === 0 || c === C);
+    const isPerimeter = (r === 0 || r === gridSize || c === 0 || c === gridSize);
 
     const info = state.getVertexDegreeInfo(r, c);
     if (isPerimeter) info.clue = null;
 
     if (info.clue !== null) {
-      // Determine constraint state:
-      //   violated  — black edges already exceed clue, OR impossible to reach clue
-      //   satisfied — black edges == clue (exact)
-      //   progress  — still reachable, not yet met
       const max = info.black + info.gray; // max achievable black edges
-      let fill;
-      let isSatisfied = false;
-      if (info.black > info.clue || max < info.clue) {
-        fill = THEME.vertexViolated;
-      } else if (info.black === info.clue) {
-        fill = THEME.vertexSatisfied;
-        isSatisfied = true;
+      const isViolated = info.black > info.clue || max < info.clue;
+      const isSatisfied = !isViolated && info.black === info.clue;
+
+      // Use subtler styling when the circle sits over a dark enclosed cell
+      const isOnDark = [[r - 1, c - 1], [r - 1, c], [r, c - 1], [r, c]].some(
+        ([cr, cc]) => cr >= 0 && cr < gridSize && cc >= 0 && cc < gridSize
+          && state.getCellColor(cr, cc) === CELL.ENCLOSED
+      );
+
+      let circleFill, circleRing, textColor;
+      if (isViolated) {
+        circleFill = THEME.vertexViolated;
+        circleRing = THEME.vertexViolatedRing;
+        textColor = THEME.vertexErrorText;
+      } else if (isSatisfied) {
+        circleFill = THEME.vertexSatisfied;
+        circleRing = THEME.vertexSatisfiedRing;
+        textColor = THEME.vertexTextSatisfied;
+      } else if (isOnDark) {
+        circleFill = THEME.vertexOnDarkFill;
+        circleRing = THEME.vertexOnDarkBorder;
+        textColor = THEME.vertexOnDarkText;
       } else {
-        fill = THEME.vertexProgress;
+        circleFill = THEME.vertexProgress;
+        circleRing = THEME.vertexProgressRing;
+        textColor = THEME.vertexText;
       }
 
       const R = THEME.vertexRadiusNumbered;
       ctx.beginPath();
       ctx.arc(x, y, R, 0, Math.PI * 2);
-      ctx.fillStyle = fill;
+      ctx.fillStyle = circleFill;
       ctx.fill();
 
-      // Distinct ring: satisfied → dark green; violated → dark red; progress → none
-      const isViolated = fill === THEME.vertexViolated;
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = isSatisfied ? THEME.vertexSatisfiedRing
-        : isViolated ? THEME.vertexViolatedRing
-          : THEME.vertexRing;
+      ctx.strokeStyle = circleRing;
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      ctx.fillStyle = isSatisfied ? THEME.vertexTextSatisfied : THEME.vertexText;
+      ctx.fillStyle = textColor;
       ctx.font = `bold ${Math.round(THEME.vertexRadiusNumbered * 1.5)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';

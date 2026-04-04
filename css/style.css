@@ -1,40 +1,65 @@
 /* ── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
+  /* ── Board surfaces ────────────────────────────────────── */
   --color-bg: #2F3A34;
   /* deep muted green-gray */
   --color-board: #F4F1E8;
-  /* warm parchment */
-  --color-hedge: #2E6F57;
-  /* rich green */
-  --color-grid: #C8C3B6;
-  /* light neutral */
-  --color-region: #DCE8E2;
-  /* light green tint — three-sided cells */
-  --color-path: #E8D9B5;
-  /* warm parchment tint — path cells */
-  --color-error: #D1493F;
-  /* warm red-orange — error vertices & stroke */
-  --color-error-fill: #D1493F44;
-  /* translucent red — error region background */
-  --color-error-border: #D1493F88;
-  /* semi-transparent red — error region perimeter */
-  --color-text-ink: #2A2A2A;
-  /* near-black */
-  --color-text-light: #F4F1E8;
-  /* parchment — on dark */
-  --color-text-muted: #D6CFC2;
-  /* warm light — toolbar labels */
-  --color-accent-exit: #7A9BB5;
-  /* steel blue */
+  /* warm parchment — undetermined cells */
+  --color-path: #E6D8AE;
+  /* warm earth tint — path cells */
+  --color-blocked: #466056;
+  /* softened dark green — enclosed cells */
+  --color-blocked-border: #3C544B;
+  /* slightly deeper — blocked cell edge */
+  --color-region: #C9C2B4;
+  /* neutral — three-sided cells */
 
-  /* UI surface */
+  /* ── Structural lines ──────────────────────────────────── */
+  --color-hedge: #2E6F57;
+  /* rich green — placed hedges */
+  --color-grid: #C9C2B4;
+  /* light neutral — grid guides */
+  --color-dot: #7E978D;
+  /* mid-tone — plain vertex dots */
+
+  /* ── Error ──────────────────────────────────────────── */
+  --color-error: #D1493F;
+  /* warm red — error vertices */
+  --color-error-dark: #A7342D;
+  /* deep red — error vertex ring */
+  --color-error-region: #D97C7440;
+  /* translucent — error region fill */
+  --color-error-region-border: #C85C5488;
+  /* semi-transparent — error perimeter */
+
+  /* ── Clue circles ────────────────────────────────────── */
+  --color-clue-fill: #F4F1E8;
+  --color-clue-border: #2E6F57;
+  --color-clue-text: #2B3A34;
+  --color-clue-on-dark-fill: #F1EEE4;
+  --color-clue-on-dark-border: #274F41;
+  --color-clue-on-dark-text: #22302B;
+
+  /* ── Solved overlay ───────────────────────────────────── */
+  --color-overlay-bg: #F2EDE2F2;
+  --color-overlay-border: #D8D0C0;
+
+  /* ── General text ─────────────────────────────────────── */
+  --color-text-ink: #2B3A34;
+  --color-text-light: #F4F1E8;
+  --color-text-muted: #D6CFC2;
+  --color-accent-exit: #7A9BB5;
+
+  /* ── Buttons / controls ────────────────────────────────── */
   --color-btn-bg: #F4F1E8;
-  --color-btn-hover: #E8E3D7;
+  --color-btn-hover: #EEE7D8;
+  --color-btn-hover-border: #255A47;
+  --color-btn-hover-text: #255A47;
   --color-btn-border: #2E6F57;
   --color-btn-text: #2E6F57;
   --color-btn-disabled-bg: #E8E6E0;
-  --color-btn-disabled-border: #B8AFA0;
-  --color-btn-disabled-text: #B8AFA0;
+  --color-btn-disabled-border: #CFC8BA;
+  --color-btn-disabled-text: #9A9A90;
 }
 
 *,
@@ -117,6 +142,8 @@ button {
 
 button:hover:not(:disabled) {
   background: var(--color-btn-hover);
+  border-color: var(--color-btn-hover-border);
+  color: var(--color-btn-hover-text);
 }
 
 button:disabled {
