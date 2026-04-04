@@ -404,3 +404,16 @@ canvas {
 .help-body ul li::marker {
   color: var(--color-hedge);
 }
+
+.help-subtle {
+  font-size: 0.9em;          /* smaller than other section headers */
+  color: #4A6B5D;            /* more muted green */
+  font-weight: 500;          /* lighter than other headers */
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.help-subtle-text {
+  font-style: italic;
+  color: #4A5A52;
+}
