@@ -208,11 +208,16 @@ canvas {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(61, 63, 56, 0.85);
   animation: backdrop-in 200ms ease-out forwards;
+}
+
+/* display:flex must live here so the browser's [hidden]{display:none} is not
+   overridden by a same-specificity class rule. */
+.help-backdrop:not([hidden]) {
+  display: flex;
 }
 
 .help-backdrop.closing {

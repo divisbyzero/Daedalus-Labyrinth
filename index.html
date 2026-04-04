@@ -38,9 +38,9 @@
         </select>
         <label for="genDiff">Difficulty:</label>
         <select id="genDiff">
-          <option value="0" selected>Easy</option>
-          <option value="1">Normal</option>
-          <option value="2">Hard</option>
+          <option value="0" selected>Normal</option>
+          <option value="1">Difficult</option>
+          <option value="2">Very Difficult</option>
         </select>
         <button id="btnGenerate">New Game</button>
       </div>
@@ -54,38 +54,34 @@
   <!-- Fixed help button -->
   <button id="btnHelp" class="help-btn" aria-label="Help / How to Play">?</button>
 
-  <!-- Help / instructions modal -->
+<!-- Help / instructions modal -->
   <div id="helpBackdrop" class="help-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
-    <div class="help-modal">
-      <button id="helpClose" class="help-close" aria-label="Close instructions">&times;</button>
-      <h2 id="helpTitle" class="help-title">How to Play</h2>
-      <div class="help-body">
-        <p><span class="help-label">Goal:</span> Build a labyrinth that connects the two exits with a single winding
-          path.</p>
+<div class="help-modal">
+<button id="helpClose" class="help-close" aria-label="Close instructions">&times;</button>
+<h2 id="helpTitle" class="help-title">How to Play</h2>
+<div class="help-body">
+<p class="help-subheading">Goal</p>
+<p>Build a labyrinth that connects the exits with a single winding path.</p>
 
-        <p class="help-subheading">How to play:</p>
-        <ul>
-          <li>Click on a gridline between two dots to place a hedge.</li>
-          <li>Click an existing hedge to remove it.</li>
-          <li>The number on each dot tells you how many hedges touch that dot.</li>
-          <li>Build hedges until a single continuous path connects both exits.</li>
-        </ul>
+<p class="help-subheading">Placing hedges</p>
+<p>Each grid line between two dots has three states: 
+  <ul>
+    <li><span class="help-hedge undecided">Undecided</span> (thin gray line)</li>
+    <li><span class="help-hedge hedge">Hedge</span> (thick green line)</li>
+    <li><span class="help-hedge removed">Removed</span> (no line)</li>
+  </ul> 
+A left-click places or removes a hedge. A right-click removes or returns an undecided line. You can also use Undo and Redo freely.</p>
 
-        <p class="help-subheading">Errors:</p>
-        <ul>
-          <li>If your hedges create a loop (a closed region with no exit), it will be highlighted in terracotta. Remove
-            a hedge to break the loop.</li>
-        </ul>
+<p class="help-subheading">The clues</p>
+<p>The number on a dot tells how many hedges meet at that dot. Use these to deduce where hedges must go and where they can't.</p>
 
-        <p class="help-subheading">Tips:</p>
-        <ul>
-          <li>Start from the exits and work inward.</li>
-          <li>A dot showing all its hedges is complete — look at its neighbors next.</li>
-          <li>Use Undo freely. Experimentation is encouraged!</li>
-        </ul>
-      </div>
-    </div>
-  </div>
+<p>No square region will have exactly three hedges around it. A square with four hedges is fine—that's an enclosed area, like a tree, that the path goes around.</p>
+
+<p class="help-subheading">Winning</p>
+<p>The puzzle is solved when the hedge walls form a single continuous walking path connecting the exits, with no loops or dead ends.</p>
+</div>
+</div>
+</div>
 
   <script src="js/constants.js"></script>
   <script src="js/state.js"></script>
