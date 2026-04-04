@@ -9,9 +9,15 @@
   --color-grid: #C8C3B6;
   /* light neutral */
   --color-region: #DCE8E2;
-  /* light green tint */
+  /* light green tint — three-sided cells */
+  --color-path: #E8D9B5;
+  /* warm parchment tint — path cells */
   --color-error: #D1493F;
-  /* warm red-orange */
+  /* warm red-orange — error vertices & stroke */
+  --color-error-fill: #D1493F44;
+  /* translucent red — error region background */
+  --color-error-border: #D1493F88;
+  /* semi-transparent red — error region perimeter */
   --color-text-ink: #2A2A2A;
   /* near-black */
   --color-text-light: #F4F1E8;
@@ -51,7 +57,7 @@ body {
 
 header {
   width: 100%;
-  background: rgba(0, 0, 0, 0.25);
+  background: #00000040;
   color: #fff;
   padding: 12px 24px;
   text-align: center;
@@ -147,7 +153,7 @@ canvas {
   display: block;
   cursor: crosshair;
   /* Lift the board off the dark background */
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 1px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 24px #00000073, 0 1px 6px #0000004D;
 }
 
 /* Timer display */
@@ -267,7 +273,7 @@ canvas {
   z-index: 1000;
   align-items: center;
   justify-content: center;
-  background: rgba(47, 58, 52, 0.88);
+  background: #2F3A34E0;
   animation: backdrop-in 200ms ease-out forwards;
 }
 
@@ -293,7 +299,7 @@ canvas {
   border: 3px solid var(--color-hedge);
   border-radius: 12px;
   padding: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px #00000066;
   animation: modal-in 200ms ease-out forwards;
 }
 

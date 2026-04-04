@@ -11,12 +11,14 @@ const C = {
   boardSurface: '#F4F1E8', // warm parchment — undetermined cells
   gridLine: '#C8C3B6', // light neutral — undecided edge guides
   hedge: '#2E6F57', // rich green — placed hedges
-  regionCompleted: '#EDE3C7', // very light green tint — enclosed/path cells
+  regionCompleted: '#E8D9B5', // warm parchment tint — path cells (more visible vs board)
   regionEnclosed: '#3E5A4F', // dark muted green — four-edge enclosed squares
   regionThreeSides: '#C8C3B6', // same neutral as grid for three-sided cells
   numberInk: '#2A2A2A', // near-black — clue numbers
-  errorRed: '#D1493F', // warm red-orange — violations & error cells
-  errorStroke: '#B83328', // deeper red — error cell border stroke
+  errorRed: '#D1493F',          // warm red-orange — violations & error vertices
+  errorFill: '#D1493F44',      // translucent red — error region overlay
+  errorStroke: '#D1493F88',    // semi-transparent red — error region perimeter
+  errorVertexStroke: '#A7342D', // deep red — ring on violated vertices
   vertexDot: '#7A8F84', // mid-tone — plain dots, subtler than hedges
   vertexSatisfiedRing: '#1F5A43', // dark green ring — satisfied vertex border
   solvedAccent: '#1F5A43', // deep rich green — Solved! overlay text
@@ -45,7 +47,7 @@ const THEME = {
   cellPath: C.regionCompleted,
   cellEnclosed: C.regionEnclosed,
   cellThreeSides: C.regionThreeSides,
-  cellError: C.errorRed,               // solid red — no bleed-through from underlying cell colour
+  cellError: C.errorFill,              // translucent red overlay — underlying cell colour shows through
 
   // Colors — edges
   edgeBlack: C.hedge,
@@ -56,7 +58,8 @@ const THEME = {
   vertexSatisfied: C.regionCompleted,   // clue exactly met — light fill
   vertexSatisfiedRing: C.vertexSatisfiedRing, // distinct dark border on satisfied
   vertexViolated: C.errorRed,          // clue impossible / exceeded
-  vertexRing: 'rgba(255,255,255,0)',
+  vertexViolatedRing: C.errorVertexStroke, // deep red ring on violated vertices
+  vertexRing: '#FFFFFF00',             // transparent — no ring on progress vertices
   vertexText: C.boardSurface,
   vertexTextSatisfied: C.numberInk,   // dark ink on light satisfied bg
 
@@ -123,12 +126,12 @@ class Renderer {
     const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
+        ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
+        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
         if (errorCells.has(`${r},${c}`)) {
           ctx.fillStyle = THEME.cellError;
-        } else {
-          ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
+          ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
         }
-        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
       }
     }
 
@@ -235,7 +238,7 @@ class Renderer {
     ctx.arcTo(bx, by + bh, bx, by, r);
     ctx.arcTo(bx, by, bx + bw, by, r);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(244, 241, 232, 0.97)';
+    ctx.fillStyle = '#F4F1E8F8';
     ctx.fill();
 
     ctx.fillStyle = C.background;
@@ -392,7 +395,6 @@ class Renderer {
       case CELL.ENCLOSED: return THEME.cellEnclosed;
       case CELL.THREESIDES: return THEME.cellThreeSides;
       case CELL.PATH: return THEME.cellPath;
-      case CELL.ERROR: return THEME.cellError;
       default: return THEME.cellUndetermined;
     }
   }
@@ -461,11 +463,14 @@ class Renderer {
       ctx.fillStyle = fill;
       ctx.fill();
 
-      // Distinct ring: satisfied → dark green border; others → transparent
+      // Distinct ring: satisfied → dark green; violated → dark red; progress → none
+      const isViolated = fill === THEME.vertexViolated;
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = isSatisfied ? THEME.vertexSatisfiedRing : THEME.vertexRing;
-      ctx.lineWidth = isSatisfied ? 2 : 2;
+      ctx.strokeStyle = isSatisfied ? THEME.vertexSatisfiedRing
+        : isViolated ? THEME.vertexViolatedRing
+          : THEME.vertexRing;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       ctx.fillStyle = isSatisfied ? THEME.vertexTextSatisfied : THEME.vertexText;
