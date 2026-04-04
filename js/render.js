@@ -3,6 +3,25 @@
 // ── Tunable theme & layout ──────────────────────────────────────────────────
 // Change any value here to adjust the look of the game.
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+// Single source of truth for all canvas colors. Mirror any UI-facing colors
+// in CSS variables in style.css so both stay in sync.
+const C = {
+  background: '#2F3A34', // deep muted green-gray — page & canvas bg
+  boardSurface: '#F4F1E8', // warm parchment — undetermined cells
+  gridLine: '#C8C3B6', // light neutral — undecided edge guides
+  hedge: '#2E6F57', // rich green — placed hedges
+  regionCompleted: '#DCE8E2', // very light green tint — enclosed/path cells
+  regionThreeSides: '#C8C3B6', // same neutral as grid for three-sided cells
+  numberInk: '#2A2A2A', // near-black — clue numbers
+  errorRed: '#D1493F', // warm red-orange — violations & error cells
+  errorStroke: '#B83328', // deeper red — error cell border stroke
+  vertexDot: '#7A8F84', // mid-tone — plain dots, subtler than hedges
+  vertexSatisfiedRing: '#1F5A43', // dark green ring — satisfied vertex border
+  solvedAccent: '#1F5A43', // deep rich green — Solved! overlay text
+  exitAccent: '#7A9BB5', // steel blue — exit markers
+};
+
 const THEME = {
   // Layout
   cellSize: 60,       // logical pixels per cell
@@ -10,46 +29,48 @@ const THEME = {
   hitTolerance: 14,     // edge click detection radius (px)
 
   // Vertex sizes
-  vertexRadiusNumbered: 10, // radius of numbered (clue) vertices (~10% smaller)
-  vertexRadiusPlain: 6,   // radius of plain (no-clue) vertices (~20% smaller than numbered)
+  vertexRadiusNumbered: 11, // radius of numbered (clue) vertices
+  vertexRadiusPlain: 5,    // radius of plain (no-clue) vertices
 
   // Edge widths
-  edgeWidthBlack: 5,    // wall edge width
-  edgeWidthGray: 1.5,    // undecided edge width
+  edgeWidthBlack: 6,    // hedge width — dominant element
+  edgeWidthGray: 1.5,    // undecided grid-guide width
 
   // Colors — canvas
-  background: '#3D3F38',  // muted sage
+  background: C.background,
 
   // Colors — cells
-  cellUndetermined: '#F2EDE4',   // white (default / undetermined cells)
-  cellPath: '#DCCFB3',          // warm packed-earth sand (labyrinth path)
-  cellEnclosed: '#2D5A3F',      // darker botanical green (impassable / tree)
-  cellThreeSides: '#B8AFA0',    // warm mid-tone gray
-  cellError: 'rgba(196, 112, 88, 0.65)', // dusty terracotta, semi-transparent overlay
+  cellUndetermined: C.boardSurface,
+  cellPath: C.regionCompleted,
+  cellEnclosed: C.regionCompleted,
+  cellThreeSides: C.regionThreeSides,
+  cellError: `rgba(209, 73, 63, 0.38)`, // errorRed overlay — strong enough to read at a glance
 
   // Colors — edges
-  edgeBlack: '#3A6B4F',   // warm botanical green (hedge)
-  edgeGray: '#B8AFA0',    // warm mid-tone gray (guide gridline)
+  edgeBlack: C.hedge,
+  edgeGray: C.gridLine,
 
   // Colors — numbered vertices
-  vertexProgress: '#3A6B4F',   // clue not yet met
-  vertexSatisfied: '#3A6B4F',  // clue exactly met
-  vertexViolated: '#A85A40',   // deeper terracotta — clue impossible / exceeded
+  vertexProgress: C.hedge,             // clue not yet met
+  vertexSatisfied: C.regionCompleted,   // clue exactly met — light fill
+  vertexSatisfiedRing: C.vertexSatisfiedRing, // distinct dark border on satisfied
+  vertexViolated: C.errorRed,          // clue impossible / exceeded
   vertexRing: 'rgba(255,255,255,0)',
-  vertexText: '#F2EDE4',
+  vertexText: C.boardSurface,
+  vertexTextSatisfied: C.numberInk,   // dark ink on light satisfied bg
 
   // Colors — plain vertices
-  vertexPlain: '#3A6B4F',  // match hedge green
+  vertexPlain: C.vertexDot,
 
   // Entry/exit archway
-  portalColor: '#DCCFB3', // match path color
-  portalRadiusScale: 1.25, // semicircle radius as a multiple of half the door width
+  portalColor: C.regionCompleted,
+  portalRadiusScale: 1.25,
 
   // Exit markers
-  exitGold: '#7A9BB5',        // warm gold for exit gap framing
-  exitLineWidth: 2,           // thin marker line across the gap
-  exitTriangleSize: 14,       // side length of the outward-pointing triangle (px)
-  exitTriangleGap: 10,         // gap between the border line and the triangle base (px)
+  exitGold: C.exitAccent,
+  exitLineWidth: 2,
+  exitTriangleSize: 14,
+  exitTriangleGap: 10,
 };
 
 /**
@@ -96,8 +117,8 @@ class Renderer {
     ctx.fillStyle = THEME.background;
     ctx.fillRect(0, 0, W, W);
 
-    // 1. Cell fills — error cells get a semi-transparent terracotta overlay on
-    //    top of their normal color so grid structure remains visible.
+    // 1. Cell fills — error cells get a semi-transparent terracotta overlay plus
+    //    a border stroke so they stand out immediately from normal play.
     const errorCells = state.getErrorCellSet();
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
@@ -107,6 +128,21 @@ class Renderer {
           ctx.fillStyle = THEME.cellError;
           ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
         }
+      }
+    }
+
+    // 1b. Error cell border strokes — drawn as a separate pass so they sit on
+    //     top of all fills and read clearly regardless of adjacency.
+    if (errorCells.size > 0) {
+      ctx.strokeStyle = C.errorStroke;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      for (const key of errorCells) {
+        const [er, ec] = key.split(',').map(Number);
+        ctx.strokeRect(
+          this.vx(ec) + 1.25, this.vy(er) + 1.25,
+          THEME.cellSize - 2.5, THEME.cellSize - 2.5
+        );
       }
     }
 
@@ -129,15 +165,22 @@ class Renderer {
 
     // 6. "Solved!" overlay — drawn last so it appears above everything
     if (state.checkWin() && !state.cheated) {
-      this._drawSolvedOverlay(ctx, C, state.solvedTime || null);
+      this._drawSolvedOverlay(ctx, C, state.solvedTime || null, state.solvedAt || null);
     }
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
-  _drawSolvedOverlay(ctx, C, timeStr) {
+  _drawSolvedOverlay(ctx, C, timeStr, solvedAt) {
     const cx = THEME.margin + C * THEME.cellSize / 2;
     const cy = THEME.margin + C * THEME.cellSize / 2;
+
+    // Ease-out scale animation: 0.82 → 1.0 over 350ms
+    const ANIM_MS = 350;
+    const elapsed = solvedAt ? Math.min(1, (Date.now() - solvedAt) / ANIM_MS) : 1;
+    const eased = 1 - Math.pow(1 - elapsed, 3); // cubic ease-out
+    const scale = 0.82 + 0.18 * eased;
+    const alpha = 0.55 + 0.45 * eased;
 
     const fontSize = Math.round(THEME.cellSize * 0.9);
     const timeFontSize = Math.round(THEME.cellSize * 0.4);
@@ -153,9 +196,15 @@ class Renderer {
     const contentH = fontSize + (timeStr ? lineGap + timeFontSize : 0);
     const bw = Math.max(solvedW, timeW) + padX * 2;
     const bh = contentH + padY * 2;
-    const bx = cx - bw / 2;
-    const by = cy - bh / 2;
     const r = Math.min(bh / 2, 28);
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.globalAlpha = alpha;
+
+    const bx = -bw / 2;
+    const by = -bh / 2;
 
     // Pill background
     ctx.beginPath();
@@ -165,24 +214,27 @@ class Renderer {
     ctx.arcTo(bx, by + bh, bx, by, r);
     ctx.arcTo(bx, by, bx + bw, by, r);
     ctx.closePath();
-    ctx.fillStyle = 'rgba(242, 237, 228, 0.93)';
+    ctx.fillStyle = 'rgba(244, 241, 232, 0.97)';
     ctx.fill();
 
-    ctx.fillStyle = THEME.edgeBlack;
+    ctx.fillStyle = C.solvedAccent;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     // "Solved!" — vertically centered in upper portion
     const solvedY = by + padY + fontSize / 2;
     ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.fillText('Solved!', cx, solvedY);
+    ctx.fillText('Solved!', 0, solvedY);
 
-    // Time — smaller, below
+    // Time — smaller, slightly muted
     if (timeStr) {
       const timeY = solvedY + fontSize / 2 + lineGap + timeFontSize / 2;
       ctx.font = `${timeFontSize}px sans-serif`;
-      ctx.fillText(timeStr, cx, timeY);
+      ctx.fillStyle = C.numberInk;
+      ctx.fillText(timeStr, 0, timeY);
     }
+
+    ctx.restore();
   }
 
   /**
@@ -372,10 +424,12 @@ class Renderer {
       //   progress  — still reachable, not yet met
       const max = info.black + info.gray; // max achievable black edges
       let fill;
+      let isSatisfied = false;
       if (info.black > info.clue || max < info.clue) {
         fill = THEME.vertexViolated;
       } else if (info.black === info.clue) {
         fill = THEME.vertexSatisfied;
+        isSatisfied = true;
       } else {
         fill = THEME.vertexProgress;
       }
@@ -386,15 +440,15 @@ class Renderer {
       ctx.fillStyle = fill;
       ctx.fill();
 
-      // White ring so it reads clearly against any cell color
+      // Distinct ring: satisfied → dark green border; others → transparent
       ctx.beginPath();
       ctx.arc(x, y, R + 1.5, 0, Math.PI * 2);
-      ctx.strokeStyle = THEME.vertexRing;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = isSatisfied ? THEME.vertexSatisfiedRing : THEME.vertexRing;
+      ctx.lineWidth = isSatisfied ? 2 : 2;
       ctx.stroke();
 
-      ctx.fillStyle = THEME.vertexText;
-      ctx.font = `bold ${Math.round(THEME.vertexRadiusNumbered * 1.4)}px sans-serif`;
+      ctx.fillStyle = isSatisfied ? THEME.vertexTextSatisfied : THEME.vertexText;
+      ctx.font = `bold ${Math.round(THEME.vertexRadiusNumbered * 1.5)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(info.clue), x, y);

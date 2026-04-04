@@ -87,7 +87,7 @@ function startTimer() {
   timerDone = false;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
-  if (state) state.solvedTime = null;
+  if (state) { state.solvedTime = null; state.solvedAt = null; }
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     timerDisplay.textContent = formatTime(elapsed);
@@ -108,7 +108,18 @@ function markTimerSolved() {
   const elapsed = Math.floor((Date.now() - timerStart) / 1000);
   timerDisplay.textContent = formatTime(elapsed);
   state.solvedTime = formatTime(elapsed);
-  redraw(); // re-render so the overlay picks up the time
+  state.solvedAt = Date.now(); // used by renderer for intro animation
+  animateSolvedIntro();
+}
+
+const SOLVED_ANIM_MS = 350; // total duration of scale-in animation
+function animateSolvedIntro() {
+  const start = Date.now();
+  function frame() {
+    redraw();
+    if (Date.now() - start < SOLVED_ANIM_MS) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────

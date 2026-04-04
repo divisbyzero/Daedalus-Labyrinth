@@ -1,3 +1,36 @@
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --color-bg: #2F3A34;
+  /* deep muted green-gray */
+  --color-board: #F4F1E8;
+  /* warm parchment */
+  --color-hedge: #2E6F57;
+  /* rich green */
+  --color-grid: #C8C3B6;
+  /* light neutral */
+  --color-region: #DCE8E2;
+  /* light green tint */
+  --color-error: #D1493F;
+  /* warm red-orange */
+  --color-text-ink: #2A2A2A;
+  /* near-black */
+  --color-text-light: #F4F1E8;
+  /* parchment — on dark */
+  --color-text-muted: #D6CFC2;
+  /* warm light — toolbar labels */
+  --color-accent-exit: #7A9BB5;
+  /* steel blue */
+
+  /* UI surface */
+  --color-btn-bg: #F4F1E8;
+  --color-btn-hover: #E8E3D7;
+  --color-btn-border: #2E6F57;
+  --color-btn-text: #2E6F57;
+  --color-btn-disabled-bg: #E8E6E0;
+  --color-btn-disabled-border: #B8AFA0;
+  --color-btn-disabled-text: #B8AFA0;
+}
+
 *,
 *::before,
 *::after {
@@ -8,8 +41,8 @@
 
 body {
   font-family: system-ui, sans-serif;
-  background: #3D3F38;
-  color: #111;
+  background: var(--color-bg);
+  color: var(--color-text-ink);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -18,7 +51,7 @@ body {
 
 header {
   width: 100%;
-  background: #2c2c2c;
+  background: rgba(0, 0, 0, 0.25);
   color: #fff;
   padding: 12px 24px;
   text-align: center;
@@ -29,7 +62,7 @@ header h1 {
   font-weight: 700;
   font-size: 1.5rem;
   letter-spacing: 0.05em;
-  color: #E8DCC8;
+  color: var(--color-text-muted);
 }
 
 main {
@@ -61,7 +94,7 @@ main {
 
 /* Labels inside toolbar */
 #toolbar label {
-  color: #E8DCC8;
+  color: var(--color-text-muted);
   font-size: 0.9rem;
 }
 
@@ -69,37 +102,37 @@ button {
   padding: 6px 14px;
   font-size: 0.9rem;
   cursor: pointer;
-  border: 1px solid #3A6B4F;
+  border: 1px solid var(--color-btn-border);
   border-radius: 6px;
-  background: #F2EDE4;
-  color: #3A6B4F;
+  background: var(--color-btn-bg);
+  color: var(--color-btn-text);
   font-family: inherit;
 }
 
 button:hover:not(:disabled) {
-  background: #E8DCC8;
+  background: var(--color-btn-hover);
 }
 
 button:disabled {
-  background: #E8E6E0;
-  border-color: #B8AFA0;
-  color: #B8AFA0;
+  background: var(--color-btn-disabled-bg);
+  border-color: var(--color-btn-disabled-border);
+  color: var(--color-btn-disabled-text);
   cursor: default;
 }
 
 select {
   padding: 5px 8px;
   font-size: 0.9rem;
-  border: 1px solid #3A6B4F;
+  border: 1px solid var(--color-btn-border);
   border-radius: 6px;
-  background: #F2EDE4;
-  color: #3A6B4F;
+  background: var(--color-btn-bg);
+  color: var(--color-btn-text);
   font-family: inherit;
   cursor: pointer;
 }
 
 select:hover {
-  background: #E8DCC8;
+  background: var(--color-btn-hover);
 }
 
 /* Canvas */
@@ -113,6 +146,8 @@ select:hover {
 canvas {
   display: block;
   cursor: crosshair;
+  /* Lift the board off the dark background */
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 1px 6px rgba(0, 0, 0, 0.3);
 }
 
 /* Timer display */
@@ -120,7 +155,7 @@ canvas {
   font-family: 'Cinzel', serif;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #E8DCC8;
+  color: var(--color-text-muted);
   letter-spacing: 0.05em;
   text-align: center;
   min-height: 28px;
@@ -131,8 +166,8 @@ canvas {
 }
 
 .timer-display.timer-solved {
-  color: #3A6B4F;
-  background: #F2EDE4;
+  color: var(--color-hedge);
+  background: var(--color-btn-bg);
   border-radius: 20px;
   padding: 5px 20px;
 }
@@ -160,7 +195,7 @@ canvas {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #3A6B4F;
+  background: var(--color-hedge);
   color: #fff;
   font-family: 'Cinzel', serif;
   font-size: 18px;
@@ -175,7 +210,7 @@ canvas {
 }
 
 .help-btn:hover:not(:disabled) {
-  background: #4A7D60;
+  background: #3A8468;
 }
 
 /* ── Help modal animations ───────────────────────────────────────────────────── */
@@ -232,7 +267,7 @@ canvas {
   z-index: 1000;
   align-items: center;
   justify-content: center;
-  background: rgba(61, 63, 56, 0.85);
+  background: rgba(47, 58, 52, 0.88);
   animation: backdrop-in 200ms ease-out forwards;
 }
 
@@ -254,8 +289,8 @@ canvas {
   width: calc(100% - 48px);
   max-height: 80vh;
   overflow-y: auto;
-  background: #F2EDE4;
-  border: 3px solid #3A6B4F;
+  background: var(--color-board);
+  border: 3px solid var(--color-hedge);
   border-radius: 12px;
   padding: 32px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -274,7 +309,7 @@ canvas {
   right: 16px;
   background: none;
   border: none;
-  color: #3A6B4F;
+  color: var(--color-hedge);
   font-size: 28px;
   line-height: 1;
   padding: 0 4px;
@@ -284,7 +319,7 @@ canvas {
 
 .help-close:hover:not(:disabled) {
   background: none;
-  color: #C47058;
+  color: var(--color-error);
 }
 
 /* ── Help modal content ──────────────────────────────────────────────────────── */
@@ -293,7 +328,7 @@ canvas {
   font-family: 'Cinzel', serif;
   font-size: 24px;
   font-weight: 700;
-  color: #3A6B4F;
+  color: var(--color-hedge);
   text-align: center;
   margin-bottom: 20px;
 }
@@ -301,7 +336,7 @@ canvas {
 .help-body {
   font-size: 15px;
   line-height: 1.6;
-  color: #3D3F38;
+  color: var(--color-text-ink);
 }
 
 .help-body p {
@@ -310,12 +345,12 @@ canvas {
 
 .help-label {
   font-weight: bold;
-  color: #3A6B4F;
+  color: var(--color-hedge);
 }
 
 .help-subheading {
   font-weight: bold;
-  color: #3A6B4F;
+  color: var(--color-hedge);
   margin-top: 14px;
   margin-bottom: 4px;
 }
@@ -331,5 +366,5 @@ canvas {
 }
 
 .help-body ul li::marker {
-  color: #3A6B4F;
+  color: var(--color-hedge);
 }
