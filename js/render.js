@@ -11,7 +11,7 @@ const THEME = {
 
   // Vertex sizes
   vertexRadiusNumbered: 10, // radius of numbered (clue) vertices (~10% smaller)
-  vertexRadiusPlain: 8,   // radius of plain (no-clue) vertices (~20% smaller than numbered)
+  vertexRadiusPlain: 6,   // radius of plain (no-clue) vertices (~20% smaller than numbered)
 
   // Edge widths
   edgeWidthBlack: 5,    // wall edge width
