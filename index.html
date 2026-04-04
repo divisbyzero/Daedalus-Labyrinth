@@ -50,6 +50,43 @@
     </div>
     <div id="statusMsg"></div>
   </main>
+
+  <!-- Fixed help button -->
+  <button id="btnHelp" class="help-btn" aria-label="Help / How to Play">?</button>
+
+  <!-- Help / instructions modal -->
+  <div id="helpBackdrop" class="help-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+    <div class="help-modal">
+      <button id="helpClose" class="help-close" aria-label="Close instructions">&times;</button>
+      <h2 id="helpTitle" class="help-title">How to Play</h2>
+      <div class="help-body">
+        <p><span class="help-label">Goal:</span> Build a labyrinth that connects the two exits with a single winding
+          path.</p>
+
+        <p class="help-subheading">How to play:</p>
+        <ul>
+          <li>Click on a gridline between two dots to place a hedge.</li>
+          <li>Click an existing hedge to remove it.</li>
+          <li>The number on each dot tells you how many hedges touch that dot.</li>
+          <li>Build hedges until a single continuous path connects both exits.</li>
+        </ul>
+
+        <p class="help-subheading">Errors:</p>
+        <ul>
+          <li>If your hedges create a loop (a closed region with no exit), it will be highlighted in terracotta. Remove
+            a hedge to break the loop.</li>
+        </ul>
+
+        <p class="help-subheading">Tips:</p>
+        <ul>
+          <li>Start from the exits and work inward.</li>
+          <li>A dot showing all its hedges is complete — look at its neighbors next.</li>
+          <li>Use Undo freely. Experimentation is encouraged!</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <script src="js/constants.js"></script>
   <script src="js/state.js"></script>
   <script src="js/render.js"></script>

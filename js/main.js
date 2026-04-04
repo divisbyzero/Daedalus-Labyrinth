@@ -12,6 +12,57 @@ const genSize = document.getElementById('genSize');
 const genDiff = document.getElementById('genDiff');
 const btnGenerate = document.getElementById('btnGenerate');
 
+// ── Help modal ────────────────────────────────────────────────────────────────
+
+const btnHelp = document.getElementById('btnHelp');
+const helpBackdrop = document.getElementById('helpBackdrop');
+const helpClose = document.getElementById('helpClose');
+
+const HELP_SEEN_KEY = 'daedalus_help_seen';
+const CLOSE_DURATION_MS = 150;
+
+function openHelpModal() {
+  helpBackdrop.removeAttribute('hidden');
+  helpBackdrop.classList.remove('closing');
+  helpClose.focus();
+  document.addEventListener('keydown', handleHelpKey);
+}
+
+function closeHelpModal() {
+  helpBackdrop.classList.add('closing');
+  document.removeEventListener('keydown', handleHelpKey);
+  setTimeout(() => {
+    helpBackdrop.setAttribute('hidden', '');
+    helpBackdrop.classList.remove('closing');
+  }, CLOSE_DURATION_MS);
+}
+
+function handleHelpKey(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeHelpModal();
+    return;
+  }
+  // Trap focus within modal (only one focusable element: the close button)
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    helpClose.focus();
+  }
+}
+
+btnHelp.addEventListener('click', openHelpModal);
+helpClose.addEventListener('click', closeHelpModal);
+helpBackdrop.addEventListener('click', (e) => {
+  if (e.target === helpBackdrop) closeHelpModal();
+});
+
+// Show automatically on first visit.
+if (!localStorage.getItem(HELP_SEEN_KEY)) {
+  localStorage.setItem(HELP_SEEN_KEY, '1');
+  // Defer until after initial render so the game is ready first.
+  setTimeout(openHelpModal, 400);
+}
+
 // ── App state ─────────────────────────────────────────────────────────────────
 
 let state = null;
@@ -67,6 +118,7 @@ function applySolvedEdgesToState(s, solved) {
 
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
+  if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open
 
   const rect = canvas.getBoundingClientRect();
   const mx = (e.clientX - rect.left) * (canvas.offsetWidth / rect.width);
@@ -149,6 +201,7 @@ doGenerate();
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
+  if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open — let handleHelpKey handle it
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
     state.undo(); redraw();
