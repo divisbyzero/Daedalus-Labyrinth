@@ -48,6 +48,8 @@ const THEME = {
   // Exit markers
   exitGold: '#7A9BB5',        // warm gold for exit gap framing
   exitLineWidth: 2,           // thin marker line across the gap
+  exitTriangleSize: 14,       // side length of the outward-pointing triangle (px)
+  exitTriangleGap: 10,         // gap between the border line and the triangle base (px)
 };
 
 /**
@@ -168,11 +170,13 @@ class Renderer {
 
   /**
    * Draw the golden gate marker at an entry/exit gap:
-   * a thin gold line spanning the gap, and gold dots at both framing vertices.
+   * a thin gold line spanning the gap, gold dots at both framing vertices,
+   * and a small equilateral triangle pointing outward from the board edge.
    */
   _drawExitMarker(ctx, state, edge) {
     if (!edge) return;
     const { isH, r, c } = edge;
+    const C = state.cells;
 
     let x1, y1, x2, y2;
     if (isH) {
@@ -200,6 +204,50 @@ class Renderer {
       ctx.arc(x, y, R, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Small equilateral triangle pointing outward from the board edge.
+    // Base is centered on the gap midpoint, parallel to the gap;
+    // apex points away from the board interior.
+    const s = THEME.exitTriangleSize;
+    const h = s * Math.sqrt(3) / 2;
+    const g = THEME.exitTriangleGap;
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+
+    let tx1, ty1, tx2, ty2, tx3, ty3;
+    if (isH) {
+      if (r === 0) {
+        // Top border — apex points up, base offset upward by gap
+        tx1 = mx - s / 2; ty1 = my - g;
+        tx2 = mx + s / 2; ty2 = my - g;
+        tx3 = mx; ty3 = my - g - h;
+      } else {
+        // Bottom border — apex points down, base offset downward by gap
+        tx1 = mx - s / 2; ty1 = my + g;
+        tx2 = mx + s / 2; ty2 = my + g;
+        tx3 = mx; ty3 = my + g + h;
+      }
+    } else {
+      if (c === 0) {
+        // Left border — apex points left, base offset leftward by gap
+        tx1 = mx - g; ty1 = my - s / 2;
+        tx2 = mx - g; ty2 = my + s / 2;
+        tx3 = mx - g - h; ty3 = my;
+      } else {
+        // Right border — apex points right, base offset rightward by gap
+        tx1 = mx + g; ty1 = my - s / 2;
+        tx2 = mx + g; ty2 = my + s / 2;
+        tx3 = mx + g + h; ty3 = my;
+      }
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(tx1, ty1);
+    ctx.lineTo(tx2, ty2);
+    ctx.lineTo(tx3, ty3);
+    ctx.closePath();
+    ctx.fillStyle = THEME.exitGold;
+    ctx.fill();
   }
 
   /**
