@@ -11,7 +11,8 @@ const C = {
   boardSurface: '#F4F1E8', // warm parchment — undetermined cells
   gridLine: '#C8C3B6', // light neutral — undecided edge guides
   hedge: '#2E6F57', // rich green — placed hedges
-  regionCompleted: '#DCE8E2', // very light green tint — enclosed/path cells
+  regionCompleted: '#EDE3C7', // very light green tint — enclosed/path cells
+  regionEnclosed: '#3E5A4F', // dark muted green — four-edge enclosed squares
   regionThreeSides: '#C8C3B6', // same neutral as grid for three-sided cells
   numberInk: '#2A2A2A', // near-black — clue numbers
   errorRed: '#D1493F', // warm red-orange — violations & error cells
@@ -42,7 +43,7 @@ const THEME = {
   // Colors — cells
   cellUndetermined: C.boardSurface,
   cellPath: C.regionCompleted,
-  cellEnclosed: C.regionCompleted,
+  cellEnclosed: C.regionEnclosed,
   cellThreeSides: C.regionThreeSides,
   cellError: `rgba(209, 73, 63, 0.38)`, // errorRed overlay — strong enough to read at a glance
 
@@ -131,19 +132,39 @@ class Renderer {
       }
     }
 
-    // 1b. Error cell border strokes — drawn as a separate pass so they sit on
-    //     top of all fills and read clearly regardless of adjacency.
+    // 1b. Error cell outer border — draw only the edges of the error region
+    //     that are NOT shared with another error cell (outer perimeter only).
+    //     This avoids double-stroking interior shared edges, which created
+    //     spurious thick lines inside the region.
     if (errorCells.size > 0) {
       ctx.strokeStyle = C.errorStroke;
       ctx.lineWidth = 2.5;
-      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
       for (const key of errorCells) {
         const [er, ec] = key.split(',').map(Number);
-        ctx.strokeRect(
-          this.vx(ec) + 1.25, this.vy(er) + 1.25,
-          THEME.cellSize - 2.5, THEME.cellSize - 2.5
-        );
+        // Top edge
+        if (!errorCells.has(`${er - 1},${ec}`)) {
+          ctx.moveTo(this.vx(ec), this.vy(er));
+          ctx.lineTo(this.vx(ec + 1), this.vy(er));
+        }
+        // Bottom edge
+        if (!errorCells.has(`${er + 1},${ec}`)) {
+          ctx.moveTo(this.vx(ec), this.vy(er + 1));
+          ctx.lineTo(this.vx(ec + 1), this.vy(er + 1));
+        }
+        // Left edge
+        if (!errorCells.has(`${er},${ec - 1}`)) {
+          ctx.moveTo(this.vx(ec), this.vy(er));
+          ctx.lineTo(this.vx(ec), this.vy(er + 1));
+        }
+        // Right edge
+        if (!errorCells.has(`${er},${ec + 1}`)) {
+          ctx.moveTo(this.vx(ec + 1), this.vy(er));
+          ctx.lineTo(this.vx(ec + 1), this.vy(er + 1));
+        }
       }
+      ctx.stroke();
     }
 
     // 2. Edges
