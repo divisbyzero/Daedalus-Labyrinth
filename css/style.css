@@ -5,11 +5,11 @@
   /* deep muted green-gray */
   --color-board: #F4F1E8;
   /* warm parchment — undetermined cells */
-  --color-path: #E6D8AE;
+  --color-path: #E8D9AC;
   /* warm earth tint — path cells */
-  --color-blocked: #466056;
-  /* softened dark green — enclosed cells */
-  --color-blocked-border: #3C544B;
+  --color-blocked: #4C625A;
+  /* slightly desaturated dark green — enclosed cells */
+  --color-blocked-border: #41564F;
   /* slightly deeper — blocked cell edge */
   --color-region: #C9C2B4;
   /* neutral — three-sided cells */
@@ -43,6 +43,8 @@
   /* ── Solved overlay ───────────────────────────────────── */
   --color-overlay-bg: #F2EDE2F2;
   --color-overlay-border: #D8D0C0;
+  --color-help-subheading: #2F6A55;
+  /* calm green — modal section headings */
 
   /* ── General text ─────────────────────────────────────── */
   --color-text-ink: #2B3A34;
@@ -383,7 +385,7 @@ canvas {
 
 .help-subheading {
   font-weight: bold;
-  color: var(--color-hedge);
+  color: var(--color-help-subheading);
   margin-top: 14px;
   margin-bottom: 4px;
 }

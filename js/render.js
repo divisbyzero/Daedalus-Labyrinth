@@ -13,8 +13,8 @@ const C = {
   // Structural
   gridLine: '#C9C2B4', // light neutral — undecided grid guides
   hedge: '#2E6F57', // rich green — placed hedges
-  regionCompleted: '#E6D8AE', // warm earth tint — path cells
-  regionEnclosed: '#466056', // softened dark green — blocked/enclosed cells
+  regionCompleted: '#E8D9AC', // warm earth tint — path cells
+  regionEnclosed: '#4C625A', // slightly desaturated dark green — blocked/enclosed cells
   regionThreeSides: '#C9C2B4', // matches grid line — three-sided cells
   // Error
   errorRed: '#D1493F',   // warm red — violated vertices
