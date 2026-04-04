@@ -115,6 +115,28 @@ canvas {
   cursor: crosshair;
 }
 
+/* Timer display */
+.timer-display {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #E8DCC8;
+  letter-spacing: 0.05em;
+  text-align: center;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 16px;
+}
+
+.timer-display.timer-solved {
+  color: #3A6B4F;
+  background: #F2EDE4;
+  border-radius: 20px;
+  padding: 5px 20px;
+}
+
 /* Status pill — shown below the board */
 #statusMsg {
   font-size: 0.9rem;

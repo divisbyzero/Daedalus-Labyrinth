@@ -68,6 +68,47 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 let state = null;
 let renderer = null;
 
+// ── Timer ─────────────────────────────────────────────────────────────────────
+
+const timerDisplay = document.getElementById('timerDisplay');
+let timerStart = null;
+let timerInterval = null;
+let timerDone = false;
+
+function formatTime(totalSeconds) {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function startTimer() {
+  stopTimer();
+  timerStart = Date.now();
+  timerDone = false;
+  timerDisplay.textContent = '0:00';
+  timerDisplay.className = 'timer-display';
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+    timerDisplay.textContent = formatTime(elapsed);
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function markTimerSolved() {
+  if (timerDone) return;
+  timerDone = true;
+  stopTimer();
+  const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+  timerDisplay.textContent = `Solved in ${formatTime(elapsed)}`;
+  timerDisplay.classList.add('timer-solved');
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 function getSolutionCountUpTo2(s) {
@@ -82,6 +123,9 @@ function redraw() {
   renderer.render(state);
   updateButtons();
   updateStatus();
+  if (state.checkWin() && !state.cheated) {
+    markTimerSolved();
+  }
 }
 
 function updateStatus() {
@@ -141,6 +185,7 @@ btnRedo.addEventListener('click', () => { state.redo(); redraw(); });
 btnReset.addEventListener('click', () => {
   // reset() preserves clues and re-opens entry/exit automatically.
   state.reset();
+  startTimer();
   redraw();
 });
 
@@ -160,6 +205,7 @@ btnShowSolution.addEventListener('click', () => {
       return;
     }
     state.cheated = true;
+    stopTimer();
     applySolvedEdgesToState(state, solved);
     redraw();
   });
@@ -183,6 +229,7 @@ function doGenerate() {
       renderer = renderer || new Renderer(canvas);
       renderer.resize(cells);
       redraw();
+      startTimer();
       statusMsg.textContent = '';
       statusMsg.style.background = '';
     } catch (err) {
