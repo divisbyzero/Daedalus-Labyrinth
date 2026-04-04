@@ -173,7 +173,7 @@ canvas.addEventListener('mousedown', (e) => {
   const edge = renderer.findEdge(mx, my, state);
   if (!edge) return;
 
-  const forward = (e.button === 0);
+  const forward = (e.button === 0 && !e.ctrlKey);
   state.clickEdge(edge.isH, edge.r, edge.c, forward);
   redraw();
 });
