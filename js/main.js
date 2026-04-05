@@ -255,9 +255,6 @@ function doGenerate() {
 
 btnGenerate.addEventListener('click', doGenerate);
 
-// Auto-generate on first visit.
-doGenerate();
-
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
@@ -273,4 +270,4 @@ document.addEventListener('keydown', (e) => {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
-initPuzzle(puzzleSelect.value);
+doGenerate();

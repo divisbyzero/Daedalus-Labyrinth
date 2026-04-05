@@ -3,25 +3,20 @@
 /**
  * Puzzle generator for Daedalus's Labyrinth.
  *
- * Modelled after Simon Tatham's Loopy generator (loopy.c / loopgen.c):
- *
- *  Phase 1  Generate a random simple cycle on the N×N cell grid.
- *           (Analogous to loopgen.c generate_loop() — produces one closed
- *           loop, not necessarily visiting every cell.)
+ *  Phase 1  Generate a random simple cycle on the N×N cell grid via face
+ *           colouring — produces one closed loop, not necessarily visiting
+ *           every cell.
  *
  *  Phase 2  Extract vertex clues from the solution: for each interior vertex,
  *           count its BLACK (wall) adjacent edges.
- *           (Direct port of loopy.c add_full_clues().)
  *
  *  Phase 3  Greedy random clue removal: visit every clue in random order;
  *           tentatively remove it; keep the removal only if the puzzle is
  *           still uniquely solvable.
- *           (Direct port of loopy.c remove_clues().)
  *
  *  Uniqueness testing uses constraint propagation — vertex-clue forcing and
  *  per-cell degree parity forcing (degree 0 or 2) — with backtracking DFS
  *  that stops as soon as a second solution is found.
- *  (Analogous to loopy.c game_has_unique_soln() / solve_game_rec().)
  */
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -52,7 +47,7 @@ function _perimToCell(edge, N) {
 // ── Phase 1: Random loop generation via face colouring ────────────────────────
 
 /**
- * Port of loopgen.c generate_loop() for a square grid.
+ * Generate a random simple cycle on an N×N cell grid via face colouring.
  *
  * Colours every vertex of the (N+1)×(N+1) vertex grid BLACK or WHITE.
  * The boundary between BLACK and WHITE regions forms a single closed loop
@@ -170,7 +165,7 @@ function generateLoop(N) {
     board[chosen.r][chosen.c] = colour;
   }
 
-  // ── Tendril-growing pass (port of loopgen.c) ─────────────────────────────
+  // ── Tendril-growing pass ─────────────────────────────────────────────────
   // Go through all coloured faces in shuffled order and flip any face
   // that can legally flip and is adjacent to exactly one opposite-colour
   // neighbour. This grows "tendrils" into monochrome clumps, increasing
@@ -364,12 +359,9 @@ function _selectEntryExit(hS, vS, N) {
  * Clue = number of BLACK (wall) adjacent edges.
  *
  * Returns a (N+1)×(N+1) array; interior positions hold 0..4, others null.
- * (Includes all clue values — remove_clues will drop the unneeded ones.)
+ * (Includes all clue values — redundant ones are removed in Phase 3.)
  *
- * Port of loopy.c add_full_clues(): for each edge on the loop boundary,
- * increment the clue counter of the touching faces.  Here the dual
- * transformation maps "face clue = loop-boundary edges" to
- * "vertex clue = BLACK adjacent edges".
+ * For each interior vertex, counts the number of BLACK (wall) adjacent edges.
  */
 function _extractAllClues(hS, vS, N) {
   const cg = Array.from({ length: N + 1 }, () => new Array(N + 1).fill(null));
@@ -832,9 +824,8 @@ function findOneSolution(clueGrid, N, entry, exit) {
  * Remove redundant clues in random order, keeping only those required for
  * uniqueness.  Modifies clueGrid in-place.
  *
- * Direct port of loopy.c remove_clues():
- *   shuffle the face list, then for each face tentatively remove its clue
- *   and call game_has_unique_soln(); restore if uniqueness is lost.
+ * Shuffles the clue list, then for each clue tentatively removes it and
+ * tests for uniqueness; restores the clue if uniqueness is lost.
  */
 function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
   const positions = [];
@@ -857,12 +848,12 @@ function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
  * Generate a random DL puzzle with `cells` cells per side at the given
  * difficulty level.
  *
- * Pipeline (modelled on loopy.c new_game_desc()):
+ * Pipeline:
  *   1. Find a random simple cycle             → the solution path
  *   1b. Break the cycle open at a border edge → entry/exit path
- *   2. Derive all vertex clues from it        → add_full_clues equivalent
- *   3. Remove redundant clues while unique    → remove_clues equivalent
- *   4. Reject if solvable at a lower diff     → Loopy's "too easy" check
+ *   2. Derive all vertex clues from it
+ *   3. Remove redundant clues while keeping uniqueness
+ *   4. Reject if solvable at a lower difficulty (too easy)
  *   5. Build and return a GameState with the minimal clue set loaded.
  *
  * Returns a configured GameState; all internal edges start as EDGE_GRAY
@@ -890,10 +881,10 @@ function generatePuzzle(cells, diff) {
     // Verify the full clue set is uniquely solvable at the target difficulty.
     if (!hasUniqueSolution(clueGrid, N, diff, entry, exit)) continue;
 
-    // Phase 3 — Remove redundant clues (Loopy's remove_clues)
+    // Phase 3 — Remove redundant clues
     _removeRedundantClues(clueGrid, N, diff, entry, exit);
 
-    // Phase 4 — Reject puzzles that are too easy (Loopy's "too easy" check).
+    // Phase 4 — Reject puzzles that are solvable at a lower difficulty.
     if (diff > DIFF_EASY && hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
 
     // Build GameState

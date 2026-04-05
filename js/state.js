@@ -193,30 +193,20 @@ class GameState {
   }
 
   /**
-   * Final cell color.  A white cell is promoted to YELLOW only when:
-   *   1. It has at least one deleted edge, AND
-   *   2. Every in-bounds neighbor across a deleted edge is itself white
-   *      (not gray or red) — i.e. "neither tile is red or gray".
+   * Final cell color.  A white cell is promoted to PATH when it has at
+   * least one deleted (EDGE_NONE) border — meaning the path passes through it.
    */
   getCellColor(r, c) {
     const base = this._getCellBaseColor(r, c);
     if (base !== CELL.WHITE) return base;
 
-    const C = this.cells;
-    // [edge state, neighbor row, neighbor col]
-    const sides = [
-      [this.hEdges[r][c], r - 1, c],  // top
-      [this.hEdges[r + 1][c], r + 1, c],  // bottom
-      [this.vEdges[r][c], r, c - 1],  // left
-      [this.vEdges[r][c + 1], r, c + 1],  // right
+    const edges = [
+      this.hEdges[r][c],
+      this.hEdges[r + 1][c],
+      this.vEdges[r][c],
+      this.vEdges[r][c + 1],
     ];
-
-    let hasDeleted = false;
-    for (const [edgeState] of sides) {
-      if (edgeState !== EDGE_NONE) continue;
-      hasDeleted = true;
-    }
-
+    const hasDeleted = edges.some(e => e === EDGE_NONE);
     return hasDeleted ? CELL.PATH : CELL.WHITE;
   }
 

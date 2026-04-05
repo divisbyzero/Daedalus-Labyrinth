@@ -8,7 +8,7 @@ const EDGE_BLACK = 2;  // selected/chosen — heavy black
 // Left-click cycles forward: NONE → GRAY → BLACK → NONE
 // Right-click cycles backward: BLACK → GRAY → NONE → BLACK
 
-// Difficulty levels (modelled on Loopy's DIFF_EASY / DIFF_NORMAL / DIFF_HARD)
+// Difficulty levels
 const DIFF_EASY = 0;  // solvable by basic constraint propagation only
 const DIFF_NORMAL = 1;  // may require paired-edge (dline) deductions
 const DIFF_HARD = 2;  // may require trial-and-error (backtracking)
