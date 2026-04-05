@@ -8,39 +8,39 @@
 // in CSS variables in style.css so both stay in sync.
 const PALETTE = {
   // Board surfaces
-  background:        '#F2EDE2F2', // canvas background
-  boardSurface:      '#F4F1E8',   // undetermined cells
+  background: '#F2EDE2F2', // canvas background
+  boardSurface: '#F4F1E8',   // undetermined cells
   // Structural
-  gridLine:          '#C9C2B4',   // undecided edge guides
-  hedge:             '#2E6F57',   // placed hedges (walls)
-  regionCompleted:   '#E8D9AC',   // path cells
-  regionEnclosed:    '#4C625A',   // enclosed cells
-  regionThreeSides:  '#C9C2B4',   // three-sided cells
+  gridLine: '#C9C2B4',   // undecided edge guides
+  hedge: '#2E6F57',   // placed hedges (walls)
+  regionCompleted: '#C8B682',   // path cells
+  regionEnclosed: '#6B7F76',   // enclosed cells
+  regionThreeSides: '#C9C2B4',   // three-sided cells
   // Error
-  errorHighlight:    '#D1493F',   // violated vertex fill
-  errorFill:         '#D97C7440', // error region overlay
-  errorStroke:       '#C85C5488', // error region perimeter
+  errorHighlight: '#D1493F',   // violated vertex fill
+  errorFill: '#C94A3A', // error region overlay
+  errorStroke: '#C85C5488', // error region perimeter
   errorVertexStroke: '#A7342D',   // violated vertex ring
-  errorVertexText:   '#FFF8F6',   // text in violated vertex circles
+  errorVertexText: '#FFF8F6',   // text in violated vertex circles
   // Clue circles — unfulfilled state
-  clueNormalFill:    '#F4F1E8',   // unfulfilled clue circle fill
-  clueNormalBorder:  '#2E6F57',   // unfulfilled clue circle ring
-  clueNormalText:    '#2B3A34',   // clue number text
+  clueNormalFill: '#F4F1E8',   // unfulfilled clue circle fill
+  clueNormalBorder: '#2E6F57',   // unfulfilled clue circle ring
+  clueNormalText: '#2B3A34',   // clue number text
   // Clue circles — on enclosed cells
-  clueOnDarkFill:    '#F1EEE4',   // clue circle fill on enclosed cells
-  clueOnDarkBorder:  '#274F41',   // clue ring on enclosed cells
-  clueOnDarkText:    '#22302B',   // clue number text on enclosed cells
+  clueOnDarkFill: '#F1EEE4',   // clue circle fill on enclosed cells
+  clueOnDarkBorder: '#274F41',   // clue ring on enclosed cells
+  clueOnDarkText: '#22302B',   // clue number text on enclosed cells
   // Vertex / dot
-  numberInk:         '#2B3A34',   // general text ink
-  vertexDot:         '#7E978D',   // plain vertex dots
+  numberInk: '#2B3A34',   // general text ink
+  vertexDot: '#3E524A',   // plain vertex dots
   vertexSatisfiedRing: '#1F5A43', // satisfied vertex border
   // Solved overlay
-  solvedOverlayBg:   '#F2EDE2F2', // solved overlay background
+  solvedOverlayBg: '#F2EDE2F2', // solved overlay background
   solvedOverlayBorder: '#D8D0C0', // solved overlay border
   solvedHeadingText: '#2B3A34',   // "Solved!" heading text
-  solvedTimeText:    '#31443C',   // elapsed time text
+  solvedTimeText: '#31443C',   // elapsed time text
   // Misc
-  exitAccent:        '#7A9BB5',   // entry/exit markers
+  exitAccent: '#7A9BB5',   // entry/exit markers
 };
 
 const THEME = {
@@ -62,51 +62,51 @@ const THEME = {
 
   // Colors — cells
   cellUndetermined: PALETTE.boardSurface,
-  cellPath:         PALETTE.regionCompleted,
-  cellEnclosed:     PALETTE.regionEnclosed,
-  cellThreeSides:   PALETTE.regionThreeSides,
-  cellError:        PALETTE.errorFill,    // error overlay (drawn on top of base fill)
-  cellErrorStroke:  PALETTE.errorStroke,  // error region perimeter
+  cellPath: PALETTE.regionCompleted,
+  cellEnclosed: PALETTE.regionEnclosed,
+  cellThreeSides: PALETTE.regionThreeSides,
+  cellError: PALETTE.errorFill,    // error overlay (drawn on top of base fill)
+  cellErrorStroke: PALETTE.errorStroke,  // error region perimeter
 
   // Colors — edges
   edgeBlack: PALETTE.hedge,
-  edgeGray:  PALETTE.gridLine,
+  edgeGray: PALETTE.gridLine,
 
   // Colors — numbered vertices — unfulfilled state
-  vertexProgress:     PALETTE.clueNormalFill,
+  vertexProgress: PALETTE.clueNormalFill,
   vertexProgressRing: PALETTE.clueNormalBorder,
-  vertexText:         PALETTE.clueNormalText,
+  vertexText: PALETTE.clueNormalText,
   // satisfied state
-  vertexSatisfied:     PALETTE.regionCompleted,
+  vertexSatisfied: PALETTE.regionCompleted,
   vertexSatisfiedRing: PALETTE.vertexSatisfiedRing,
   vertexTextSatisfied: PALETTE.numberInk,
   // violated state
-  vertexViolated:    PALETTE.errorHighlight,
+  vertexViolated: PALETTE.errorHighlight,
   vertexViolatedRing: PALETTE.errorVertexStroke,
-  vertexErrorText:   PALETTE.errorVertexText,
+  vertexErrorText: PALETTE.errorVertexText,
   // clue on enclosed cell
-  vertexOnDarkFill:   PALETTE.clueOnDarkFill,
+  vertexOnDarkFill: PALETTE.clueOnDarkFill,
   vertexOnDarkBorder: PALETTE.clueOnDarkBorder,
-  vertexOnDarkText:   PALETTE.clueOnDarkText,
+  vertexOnDarkText: PALETTE.clueOnDarkText,
 
   // Colors — plain vertices
   vertexPlain: PALETTE.vertexDot,
 
   // Solved overlay
-  solvedOverlayBg:     PALETTE.solvedOverlayBg,
+  solvedOverlayBg: PALETTE.solvedOverlayBg,
   solvedOverlayBorder: PALETTE.solvedOverlayBorder,
-  solvedHeadingText:   PALETTE.solvedHeadingText,
-  solvedTimeText:      PALETTE.solvedTimeText,
+  solvedHeadingText: PALETTE.solvedHeadingText,
+  solvedTimeText: PALETTE.solvedTimeText,
 
   // Entry/exit archway
-  portalColor:       PALETTE.regionCompleted,
+  portalColor: PALETTE.regionCompleted,
   portalRadiusScale: 1.25,
 
   // Entry/exit markers
-  exitMarker:       PALETTE.exitAccent,
-  exitLineWidth:    2,
+  exitMarker: PALETTE.exitAccent,
+  exitLineWidth: 2,
   exitTriangleSize: 14,
-  exitTriangleGap:  10,
+  exitTriangleGap: 10,
 };
 
 /**
@@ -421,11 +421,11 @@ class Renderer {
 
   _cellFill(color) {
     switch (color) {
-      case CELL.ENCLOSED:   return THEME.cellEnclosed;
-      case CELL.PATH:       return THEME.cellPath;
+      case CELL.ENCLOSED: return THEME.cellEnclosed;
+      case CELL.PATH: return THEME.cellPath;
       case CELL.THREESIDES: // base fill visible beneath error overlay
       case CELL.ERROR:      // base fill visible beneath error overlay
-      default:              return THEME.cellUndetermined;
+      default: return THEME.cellUndetermined;
     }
   }
 
