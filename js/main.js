@@ -71,6 +71,7 @@ let renderer = null;
 // ── Timer ─────────────────────────────────────────────────────────────────────
 
 const timerDisplay = document.getElementById('timerDisplay');
+const toolbarCenter = document.getElementById('toolbarCenter');
 let timerStart = null;
 let timerInterval = null;
 let timerDone = false;
@@ -87,6 +88,7 @@ function startTimer() {
   timerDone = false;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
+  toolbarCenter.hidden = false;
   if (state) { state.solvedTime = null; state.solvedAt = null; }
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
@@ -109,6 +111,7 @@ function markTimerSolved() {
   timerDisplay.textContent = formatTime(elapsed);
   state.solvedTime = formatTime(elapsed);
   state.solvedAt = Date.now(); // used by renderer for intro animation
+  toolbarCenter.hidden = true;
   animateSolvedIntro();
 }
 
