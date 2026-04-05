@@ -11,7 +11,7 @@ const PALETTE = {
   boardSurface: '#F6F4E8',   // undetermined cells — warm neutral
 
   // Structural
-  gridLine: '#B0A890',
+  gridLine: '#9A9078',
   hedge: '#265C48',   // deep shadowed hedge green
   regionCompleted: '#C9BFA0',   // stone/limestone path
   regionEnclosed: '#6E8880',   // shaded interior lawn
