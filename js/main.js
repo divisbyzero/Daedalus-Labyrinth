@@ -26,6 +26,7 @@ function openHelpModal() {
   helpBackdrop.classList.remove('closing');
   helpClose.focus();
   document.addEventListener('keydown', handleHelpKey);
+  pauseTimer();
 }
 
 function closeHelpModal() {
@@ -34,6 +35,7 @@ function closeHelpModal() {
   setTimeout(() => {
     helpBackdrop.setAttribute('hidden', '');
     helpBackdrop.classList.remove('closing');
+    resumeTimer();
   }, CLOSE_DURATION_MS);
 }
 
@@ -75,6 +77,7 @@ const toolbarCenter = document.getElementById('toolbarCenter');
 let timerStart = null;
 let timerInterval = null;
 let timerDone = false;
+let timerPausedAt = null;
 
 function formatTime(totalSeconds) {
   const m = Math.floor(totalSeconds / 60);
@@ -101,6 +104,25 @@ function stopTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
   }
+}
+
+function pauseTimer() {
+  if (timerInterval === null || timerDone) return;
+  timerPausedAt = Date.now();
+  stopTimer();
+}
+
+function resumeTimer() {
+  if (timerInterval !== null || timerDone || timerStart === null) return;
+  // Shift timerStart forward by however long we were paused.
+  if (timerPausedAt !== null) {
+    timerStart += Date.now() - timerPausedAt;
+    timerPausedAt = null;
+  }
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+    timerDisplay.textContent = formatTime(elapsed);
+  }, 1000);
 }
 
 function markTimerSolved() {
