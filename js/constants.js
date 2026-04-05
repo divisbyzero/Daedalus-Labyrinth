@@ -5,8 +5,8 @@ const EDGE_NONE = 0;  // deleted/removed — invisible
 const EDGE_GRAY = 1;  // unselected — light gray
 const EDGE_BLACK = 2;  // selected/chosen — heavy black
 
-// Left-click cycles forward: NONE → GRAY → BLACK → NONE
-// Right-click cycles backward: BLACK → GRAY → NONE → BLACK
+// Left-click cycles forward:  GRAY → BLACK → NONE → GRAY
+// Right-click cycles backward: GRAY → NONE → BLACK → GRAY
 
 // Difficulty levels
 const DIFF_EASY = 0;  // solvable by basic constraint propagation only

@@ -125,17 +125,17 @@ class GameState {
     if (!isH && (c === 0 || c === C)) return;
 
     const from = this.getEdge(isH, r, c);
-    // Left (forward):  NONE→GRAY→BLACK→GRAY→BLACK…  (BLACK wraps to GRAY, not NONE)
-    // Right (backward): BLACK→GRAY→NONE→GRAY→NONE… (NONE wraps to GRAY, not BLACK)
+    // Left (forward):  GRAY→BLACK→NONE→GRAY…
+    // Right (backward): GRAY→NONE→BLACK→GRAY…
     let to;
     if (forward) {
-      to = (from === EDGE_NONE) ? EDGE_GRAY
-        : (from === EDGE_GRAY) ? EDGE_BLACK
-          : EDGE_GRAY;  // BLACK→GRAY
+      to = (from === EDGE_GRAY) ? EDGE_BLACK
+        : (from === EDGE_BLACK) ? EDGE_NONE
+          : EDGE_GRAY;  // NONE→GRAY
     } else {
-      to = (from === EDGE_BLACK) ? EDGE_GRAY
-        : (from === EDGE_GRAY) ? EDGE_NONE
-          : EDGE_GRAY; // NONE→GRAY
+      to = (from === EDGE_GRAY) ? EDGE_NONE
+        : (from === EDGE_NONE) ? EDGE_BLACK
+          : EDGE_GRAY;  // BLACK→GRAY
     }
     if (from === to) return;
     this._undoStack.push({ isH, r, c, from, to });
