@@ -483,6 +483,7 @@ class GameState {
         this.vEdges[r][c] = EDGE_GRAY;
     this._undoStack = [];
     this._redoStack = [];
+    this.cheated = false;
     this._initPerimeter();
     // clues are intentionally preserved
   }
