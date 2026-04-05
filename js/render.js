@@ -8,7 +8,7 @@
 // in CSS variables in style.css so both stay in sync.
 const C = {
   // Board surfaces
-  background: '#2F3A34', // deep muted green-gray — page & canvas bg
+  background: '#F2EDE2F2', // deep muted green-gray — page & canvas bg
   boardSurface: '#F4F1E8', // warm parchment — undetermined cells
   // Structural
   gridLine: '#C9C2B4', // light neutral — undecided grid guides
@@ -221,12 +221,6 @@ class Renderer {
       for (let c = 0; c <= C; c++) {
         this._drawVertex(ctx, state, r, c);
       }
-    }
-
-    // 5. Exit markers — drawn after vertices so gold dots appear on top
-    if (state.openMode) {
-      this._drawExitMarker(ctx, state, state.entry);
-      this._drawExitMarker(ctx, state, state.exit);
     }
 
     // 6. "Solved!" overlay — drawn last so it appears above everything
