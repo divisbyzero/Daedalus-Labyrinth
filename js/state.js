@@ -212,14 +212,9 @@ class GameState {
     ];
 
     let hasDeleted = false;
-    for (const [edgeState, nr, nc] of sides) {
+    for (const [edgeState] of sides) {
       if (edgeState !== EDGE_NONE) continue;
       hasDeleted = true;
-      // If the neighbor exists and is gray or red, stay white.
-      if (nr >= 0 && nr < C && nc >= 0 && nc < C) {
-        const nb = this._getCellBaseColor(nr, nc);
-        if (nb === CELL.THREESIDES || nb === CELL.ERROR) return CELL.WHITE;
-      }
     }
 
     return hasDeleted ? CELL.PATH : CELL.WHITE;

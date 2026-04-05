@@ -155,7 +155,17 @@ class Renderer {
 
     // 1. Cell fills — error cells get a semi-transparent terracotta overlay plus
     //    a border stroke so they stand out immediately from normal play.
+    //    Per-cell errors (three black edges, or too many deleted edges) are
+    //    also treated as errors and included in the same overlay pass.
     const errorCells = state.getErrorCellSet();
+    for (let r = 0; r < C; r++) {
+      for (let c = 0; c < C; c++) {
+        const cellColor = state.getCellColor(r, c);
+        if (cellColor === CELL.THREESIDES || cellColor === CELL.ERROR) {
+          errorCells.add(`${r},${c}`);
+        }
+      }
+    }
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
         ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
@@ -429,8 +439,9 @@ class Renderer {
   _cellFill(color) {
     switch (color) {
       case CELL.ENCLOSED: return THEME.cellEnclosed;
-      case CELL.THREESIDES: return THEME.cellThreeSides;
+      case CELL.THREESIDES: return THEME.cellUndetermined; // base beneath error overlay
       case CELL.PATH: return THEME.cellPath;
+      case CELL.ERROR: return THEME.cellUndetermined;      // base beneath error overlay
       default: return THEME.cellUndetermined;
     }
   }
