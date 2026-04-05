@@ -4,43 +4,49 @@
 // Change any value here to adjust the look of the game.
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
-// Single source of truth for all canvas colors. Mirror any UI-facing colors
-// in CSS variables in style.css so both stay in sync.
+// "Ancient Maze" — refined
 const PALETTE = {
   // Board surfaces
-  background: '#F2EDE2F2', // canvas background
-  boardSurface: '#F4F1E8',   // undetermined cells
+  background: '#E4EAE4',   // warmer than before — restores frame/board separation
+  boardSurface: '#F6F4E8',   // undetermined cells — warm neutral
+
   // Structural
-  gridLine: '#C9C2B4',   // undecided edge guides
-  hedge: '#2E6F57',   // placed hedges (walls)
-  regionCompleted: '#C8B682',   // path cells
-  regionEnclosed: '#6B7F76',   // enclosed cells
-  regionThreeSides: '#C9C2B4',   // three-sided cells
+  gridLine: '#B0A890',
+  hedge: '#265C48',   // deep shadowed hedge green
+  regionCompleted: '#C9BFA0',   // stone/limestone path
+  regionEnclosed: '#6E8880',   // shaded interior lawn
+  regionThreeSides: '#BDC4BB',
+
   // Error
-  errorHighlight: '#D1493F',   // violated vertex fill
-  errorFill: '#C94A3A', // error region overlay
-  errorStroke: '#C85C5488', // error region perimeter
-  errorVertexStroke: '#A7342D',   // violated vertex ring
-  errorVertexText: '#FFF8F6',   // text in violated vertex circles
+  errorHighlight: '#7A3040',   // deep wine — wrong but belongs to the world
+  errorFill: '#743040',
+  errorStroke: '#6A304088',
+  errorVertexStroke: '#5A2030',
+  errorVertexText: '#FFF0F2',
+
   // Clue circles — unfulfilled state
-  clueNormalFill: '#F4F1E8',   // unfulfilled clue circle fill
-  clueNormalBorder: '#2E6F57',   // unfulfilled clue circle ring
-  clueNormalText: '#2B3A34',   // clue number text
+  clueNormalFill: '#F5F3EC',
+  clueNormalBorder: '#265C48',
+  clueNormalText: '#253330',
+
   // Clue circles — on enclosed cells
-  clueOnDarkFill: '#F1EEE4',   // clue circle fill on enclosed cells
-  clueOnDarkBorder: '#274F41',   // clue ring on enclosed cells
-  clueOnDarkText: '#22302B',   // clue number text on enclosed cells
+  clueOnDarkFill: '#E8EDEA',
+  clueOnDarkBorder: '#1C4A38',
+  clueOnDarkText: '#182820',
+
   // Vertex / dot
-  numberInk: '#2B3A34',   // general text ink
-  vertexDot: '#3E524A',   // plain vertex dots
-  vertexSatisfiedRing: '#1F5A43', // satisfied vertex border
+  numberInk: '#253330',
+  vertexDot: '#3A4E47',
+  vertexSatisfiedRing: '#1C5240',
+
   // Solved overlay
-  solvedOverlayBg: '#F2EDE2F2', // solved overlay background
-  solvedOverlayBorder: '#D8D0C0', // solved overlay border
-  solvedHeadingText: '#2B3A34',   // "Solved!" heading text
-  solvedTimeText: '#31443C',   // elapsed time text
+  solvedOverlayBg: '#E4EAE4EE',
+  solvedOverlayBorder: '#BDC4BB',
+  solvedHeadingText: '#253330',
+  solvedTimeText: '#2C4038',
+
   // Misc
-  exitAccent: '#7A9BB5',   // entry/exit markers
+  exitAccent: '#5A8CAA',
 };
 
 const THEME = {
