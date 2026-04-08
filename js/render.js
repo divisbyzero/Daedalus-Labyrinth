@@ -127,6 +127,8 @@ class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = window.devicePixelRatio || 1;
+    this._cellSize = THEME.cellSize;
+    this._hitTolerance = THEME.hitTolerance;
   }
 
   // ── Setup ─────────────────────────────────────────────────────────────────
@@ -134,7 +136,12 @@ class Renderer {
   /** Resize the canvas to fit a board with `cells` cells per side. */
   resize(cells) {
     this._lastCells = cells;
-    const total = THEME.margin * 2 + cells * THEME.cellSize;
+    // Scale cell size down if the screen is too narrow; cap at the design default.
+    const availableWidth = window.innerWidth - 32; // 16px body padding each side
+    this._cellSize = Math.min(THEME.cellSize, Math.floor((availableWidth - THEME.margin * 2) / cells));
+    // Slightly larger hit zone for finger taps on phones.
+    this._hitTolerance = Math.min(screen.width, screen.height) <= 480 ? 18 : THEME.hitTolerance;
+    const total = THEME.margin * 2 + cells * this._cellSize;
     const dpr = this.dpr;
     this.canvas.width = total * dpr;
     this.canvas.height = total * dpr;
@@ -145,15 +152,15 @@ class Renderer {
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
-  vx(c) { return THEME.margin + c * THEME.cellSize; }
-  vy(r) { return THEME.margin + r * THEME.cellSize; }
+  vx(c) { return THEME.margin + c * this._cellSize; }
+  vy(r) { return THEME.margin + r * this._cellSize; }
 
   // ── Main render ───────────────────────────────────────────────────────────
 
   render(state) {
     const { ctx } = this;
     const C = state.cells;
-    const W = THEME.margin * 2 + C * THEME.cellSize;
+    const W = THEME.margin * 2 + C * this._cellSize;
 
     // Background
     ctx.fillStyle = THEME.background;
@@ -240,8 +247,8 @@ class Renderer {
     const scale = 0.82 + 0.18 * eased;
     const alpha = 0.55 + 0.45 * eased;
 
-    const fontSize = Math.round(THEME.cellSize * 0.9);
-    const timeFontSize = Math.round(THEME.cellSize * 0.4);
+    const fontSize = Math.round(this._cellSize * 0.9);
+    const timeFontSize = Math.round(this._cellSize * 0.4);
     const lineGap = Math.round(fontSize * 0.22);
 
     ctx.font = `bold ${fontSize}px sans-serif`;
@@ -387,7 +394,7 @@ class Renderer {
     if (!edge) return;
     const C = state.cells;
     const { isH, r, c } = edge;
-    const rad = (THEME.cellSize / 2) * THEME.portalRadiusScale;
+    const rad = (this._cellSize / 2) * THEME.portalRadiusScale;
 
     let cx, cy, startAngle, endAngle, anticlockwise;
 
@@ -542,7 +549,7 @@ class Renderer {
    */
   findEdge(mouseX, mouseY, state) {
     const C = state.cells;
-    const HIT = THEME.hitTolerance;
+    const HIT = this._hitTolerance;
     let best = null;
     let bestD = HIT + 1;
 

@@ -65,6 +65,12 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
   setTimeout(openHelpModal, 400);
 }
 
+// ── Phone detection ───────────────────────────────────────────────────────────
+// Use the shorter screen dimension so landscape orientation stays restricted too.
+
+const IS_PHONE = Math.min(screen.width, screen.height) <= 480;
+if (IS_PHONE) document.body.classList.add('is-phone');
+
 // ── App state ─────────────────────────────────────────────────────────────────
 
 let state = null;
@@ -216,6 +222,20 @@ canvas.addEventListener('mousedown', (e) => {
 
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+// Touch support (phones) — tap cycles forward; use Undo for corrections.
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault(); // block scroll and the synthesised mouse event
+  if (!helpBackdrop.hasAttribute('hidden')) return;
+  const touch = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const mx = (touch.clientX - rect.left) * (canvas.offsetWidth / rect.width);
+  const my = (touch.clientY - rect.top) * (canvas.offsetHeight / rect.height);
+  const edge = renderer.findEdge(mx, my, state);
+  if (!edge) return;
+  state.clickEdge(edge.isH, edge.r, edge.c, true); // always forward on touch
+  redraw();
+}, { passive: false });
+
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
 btnUndo.addEventListener('click', () => { state.undo(); redraw(); });
@@ -252,7 +272,7 @@ btnShowSolution.addEventListener('click', () => {
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 function doGenerate() {
-  const cells = parseInt(genSize.value, 10);
+  const cells = IS_PHONE ? 6 : parseInt(genSize.value, 10);
   const diff = parseInt(genDiff.value, 10);
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';

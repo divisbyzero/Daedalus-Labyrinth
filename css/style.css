@@ -196,6 +196,7 @@ select:hover {
 canvas {
   display: block;
   cursor: crosshair;
+  touch-action: none; /* prevent scroll/zoom when tapping the board */
   /* Lift the board off the dark background */
   box-shadow: 0 4px 24px #00000073, 0 1px 6px #0000004D;
 }
@@ -421,4 +422,14 @@ canvas {
 .help-subtle-text {
   font-style: italic;
   color: #4A5A52;
+}
+
+/* ── Phone layout ────────────────────────────────────────────────────────────── */
+/* Size and difficulty controls are hidden on phones — board is fixed at 6×6. */
+
+body.is-phone label[for="genSize"],
+body.is-phone #genSize,
+body.is-phone label[for="genDiff"],
+body.is-phone #genDiff {
+  display: none;
 }
