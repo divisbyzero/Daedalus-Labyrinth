@@ -164,7 +164,7 @@ function getSolutionCountUpTo2(s) {
 }
 
 function redraw() {
-  renderer.render(state);
+  renderer.render(state, pressEdge);
   updateButtons();
   updateStatus();
   if (state.checkWin() && !state.cheated) {
@@ -234,8 +234,10 @@ function startPress(clientX, clientY, forward) {
   const { x, y } = getCanvasXY(clientX, clientY);
   pressEdge = renderer ? renderer.findEdge(x, y, state) : null;
   if (!pressEdge) return;
+  redraw(); // show highlight immediately
   pressTimer = setTimeout(() => {
     pressTimer = null;
+    if (navigator.vibrate) navigator.vibrate(40);
     state.setEdge(pressEdge.isH, pressEdge.r, pressEdge.c, EDGE_NONE);
     pressEdge = null;
     redraw();
@@ -253,7 +255,9 @@ function commitShortPress() {
 
 function cancelPress() {
   if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  const hadEdge = pressEdge !== null;
   pressEdge = null;
+  if (hadEdge && renderer && state) redraw(); // clear the highlight
 }
 
 // ── Mouse ─────────────────────────────────────────────────────────────────────

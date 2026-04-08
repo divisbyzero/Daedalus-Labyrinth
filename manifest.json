@@ -1,0 +1,10 @@
+{
+  "name": "Daedalus' Labyrinth",
+  "short_name": "Labyrinth",
+  "description": "A hedge-placement labyrinth puzzle",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#2F3A34",
+  "theme_color": "#2F3A34",
+  "orientation": "portrait-primary"
+}

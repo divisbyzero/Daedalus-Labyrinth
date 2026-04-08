@@ -175,7 +175,7 @@ class Renderer {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
-  render(state) {
+  render(state, highlightEdge = null) {
     const { ctx } = this;
     const C = state.cells;
     const W = this._margin * 2 + C * this._cellSize;
@@ -238,6 +238,9 @@ class Renderer {
     // 2. Edges
     this._drawAllEdges(state, EDGE_GRAY);
     this._drawAllEdges(state, EDGE_BLACK);
+
+    // 2a. Long-press pending indicator — drawn above edges, below vertices
+    if (highlightEdge) this._drawEdgeHighlight(highlightEdge);
 
     // 3. Vertices (on top of everything)
     for (let r = 0; r <= C; r++) {
@@ -556,6 +559,26 @@ class Renderer {
       ctx.fillStyle = THEME.vertexPlain;
       ctx.fill();
     }
+  }
+
+  /** Amber band over an edge to show a long press is in progress. */
+  _drawEdgeHighlight(edge) {
+    const { ctx } = this;
+    const { isH, r, c } = edge;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(195, 155, 55, 0.65)';
+    ctx.lineWidth = this._cellSize * 0.28;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (isH) {
+      ctx.moveTo(this.vx(c), this.vy(r));
+      ctx.lineTo(this.vx(c + 1), this.vy(r));
+    } else {
+      ctx.moveTo(this.vx(c), this.vy(r));
+      ctx.lineTo(this.vx(c), this.vy(r + 1));
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   // ── Hit detection ─────────────────────────────────────────────────────────
