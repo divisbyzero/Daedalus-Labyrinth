@@ -143,6 +143,21 @@ class GameState {
     this._setEdge(isH, r, c, to);
   }
 
+  /**
+   * Set an edge directly to a specific state, recording it for undo.
+   * Used for long-press delete (→ EDGE_NONE).
+   */
+  setEdge(isH, r, c, value) {
+    const C = this.cells;
+    if (isH && (r === 0 || r === C)) return;
+    if (!isH && (c === 0 || c === C)) return;
+    const from = this.getEdge(isH, r, c);
+    if (from === value) return;
+    this._undoStack.push({ isH, r, c, from, to: value });
+    this._redoStack = [];
+    this._setEdge(isH, r, c, value);
+  }
+
   // ── Undo / Redo ──────────────────────────────────────────────────────────
 
   get canUndo() { return this._undoStack.length > 0; }
