@@ -463,7 +463,12 @@ body.is-phone header h1 {
 }
 
 body.is-phone main {
+  flex: 1;
   padding: 4px;
+}
+
+body.is-phone #canvasWrapper {
+  flex: 1;
 }
 
 body.is-phone #toolbar {
