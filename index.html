@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="phoneicon.png?v=2">
   <link rel="apple-touch-icon" sizes="167x167" href="phoneicon.png?v=2">
   <link rel="apple-touch-icon" sizes="152x152" href="phoneicon.png?v=2">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=4">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
@@ -42,18 +42,6 @@
         <div class="toolbar-divider"></div>
       </div>
       <div class="toolbar-group">
-        <label for="genSize">Size:</label>
-        <select id="genSize">
-          <option value="4">4×4</option>
-          <option value="5">5×5</option>
-          <option value="6">6×6</option>
-          <option value="7">7×7</option>
-          <option value="8">8×8</option>
-          <option value="9">9×9</option>
-          <option value="10" selected>10×10</option>
-          <option value="12">12×12</option>
-          <option value="15">15×15</option>
-        </select>
         <button id="btnGenerate">New Game</button>
       </div>
     </div>
@@ -70,6 +58,18 @@
       <h2 id="prefsTitle" class="modal-title">Preferences</h2>
       <div class="prefs-body">
         <p class="prefs-section-heading">New Game</p>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Board size</span>
+            <span class="pref-desc">Number of cells per side</span>
+          </div>
+          <select id="prefSize">
+            <option value="4">4×4</option>
+            <option value="5">5×5</option>
+            <option value="6">6×6</option>
+            <option value="7">7×7</option>
+          </select>
+        </div>
         <div class="pref-row">
           <div class="pref-label-group">
             <span class="pref-label">Difficulty</span>
@@ -148,7 +148,7 @@
   <script src="js/state.js?v=2"></script>
   <script src="js/render.js?v=2"></script>
   <script src="js/generator.js?v=2"></script>
-  <script src="js/main.js?v=2"></script>
+  <script src="js/main.js?v=3"></script>
 </body>
 
 </html>

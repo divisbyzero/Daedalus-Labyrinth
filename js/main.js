@@ -8,7 +8,6 @@ const btnRedo = document.getElementById('btnRedo');
 const btnReset = document.getElementById('btnReset');
 const btnShowSolution = document.getElementById('btnShowSolution');
 const statusMsg = document.getElementById('statusMsg');
-const genSize = document.getElementById('genSize');
 const btnGenerate = document.getElementById('btnGenerate');
 
 // ── Help modal ────────────────────────────────────────────────────────────────
@@ -68,13 +67,14 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 
 const PREFS_KEY = 'daedalus_prefs';
 const PREFS_VERSION = 1;
-const prefs = { difficulty: 0, showErrors: true, showTimer: true };
+const prefs = { difficulty: 0, boardSize: 6, showErrors: true, showTimer: true };
 
 function loadPrefs() {
   try {
     const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
     if (saved.version !== PREFS_VERSION) return; // stale/unversioned save — use defaults
     if (typeof saved.difficulty === 'number') prefs.difficulty = saved.difficulty;
+    if (typeof saved.boardSize === 'number') prefs.boardSize = saved.boardSize;
     if (typeof saved.showErrors === 'boolean') prefs.showErrors = saved.showErrors;
     if (typeof saved.showTimer === 'boolean') prefs.showTimer = saved.showTimer;
   } catch (_) { }
@@ -88,11 +88,13 @@ function savePrefs() {
 const btnPrefs = document.getElementById('btnPrefs');
 const prefsBackdrop = document.getElementById('prefsBackdrop');
 const prefsClose = document.getElementById('prefsClose');
+const prefSize = document.getElementById('prefSize');
 const prefDiff = document.getElementById('prefDiff');
 const prefShowErrors = document.getElementById('prefShowErrors');
 const prefShowTimer = document.getElementById('prefShowTimer');
 
 function syncPrefsUI() {
+  prefSize.value = String(prefs.boardSize);
   prefDiff.value = String(prefs.difficulty);
   prefShowErrors.checked = prefs.showErrors;
   prefShowTimer.checked = prefs.showTimer;
@@ -125,7 +127,7 @@ function handlePrefsKey(e) {
   }
   if (e.key === 'Tab') {
     e.preventDefault();
-    const focusable = [prefsClose, prefDiff, prefShowErrors, prefShowTimer];
+    const focusable = [prefsClose, prefSize, prefDiff, prefShowErrors, prefShowTimer];
     const idx = focusable.indexOf(document.activeElement);
     const next = e.shiftKey
       ? (idx - 1 + focusable.length) % focusable.length
@@ -138,6 +140,11 @@ btnPrefs.addEventListener('click', openPrefsModal);
 prefsClose.addEventListener('click', closePrefsModal);
 prefsBackdrop.addEventListener('click', (e) => {
   if (e.target === prefsBackdrop) closePrefsModal();
+});
+
+prefSize.addEventListener('change', () => {
+  prefs.boardSize = parseInt(prefSize.value, 10);
+  savePrefs();
 });
 
 prefDiff.addEventListener('change', () => {
@@ -438,7 +445,7 @@ btnShowSolution.addEventListener('click', () => {
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 function doGenerate() {
-  const cells = IS_PHONE ? 6 : parseInt(genSize.value, 10);
+  const cells = prefs.boardSize;
   const diff = prefs.difficulty;
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';

@@ -563,13 +563,7 @@ canvas {
 }
 
 /* ── Phone layout ────────────────────────────────────────────────────────────── */
-/* Size and difficulty controls are hidden on phones — board is fixed at 6×6.   */
 /* Padding is reduced so the board fills as much of the screen as possible.      */
-
-body.is-phone label[for="genSize"],
-body.is-phone #genSize {
-  display: none;
-}
 
 body.is-phone header {
   padding: 8px 12px;
