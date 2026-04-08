@@ -140,16 +140,23 @@ class Renderer {
     // Read available width from the wrapper (which has width:100%, so this is
     // the true content width after CSS padding is applied).
     const availableWidth = this.canvas.parentElement.clientWidth;
-    // Solve cellSize and margin simultaneously so the canvas fills the wrapper
-    // while keeping margin/cellSize at the design ratio (42/60 = 0.7), which
-    // ensures portal arches always clear the canvas edge.
-    // From: (2r + cells) * cellSize = availableWidth  →  cellSize = avail / (2r + cells)
-    const r = THEME.margin / THEME.cellSize; // 0.7
-    const fittedCellSize = Math.floor(availableWidth / (2 * r + cells));
-    this._cellSize = Math.min(THEME.cellSize, fittedCellSize);
-    this._margin = this._cellSize < THEME.cellSize
-      ? Math.floor((availableWidth - cells * this._cellSize) / 2)
-      : THEME.margin;
+    const isPhone = Math.min(screen.width, screen.height) <= 480;
+    if (isPhone) {
+      // On phones, target a thin margin (~10px) and maximize cell size.
+      // The canvas fills the wrapper wall-to-wall.
+      const targetMargin = 10;
+      this._cellSize = Math.min(THEME.cellSize, Math.floor((availableWidth - 2 * targetMargin) / cells));
+      this._margin = Math.floor((availableWidth - cells * this._cellSize) / 2);
+    } else {
+      // On desktop/tablet, preserve the design-default margin when there is
+      // plenty of room; scale gracefully for narrower windows.
+      const r = THEME.margin / THEME.cellSize; // 0.7
+      const fittedCellSize = Math.floor(availableWidth / (2 * r + cells));
+      this._cellSize = Math.min(THEME.cellSize, fittedCellSize);
+      this._margin = this._cellSize < THEME.cellSize
+        ? Math.floor((availableWidth - cells * this._cellSize) / 2)
+        : THEME.margin;
+    }
     // Slightly larger hit zone for finger taps on phones.
     this._hitTolerance = Math.min(screen.width, screen.height) <= 480 ? 18 : THEME.hitTolerance;
     const total = this._margin * 2 + cells * this._cellSize;
