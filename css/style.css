@@ -73,7 +73,8 @@
 }
 
 html {
-  overscroll-behavior: none; /* prevent pull-to-refresh */
+  overscroll-behavior: none;
+  /* prevent pull-to-refresh */
 }
 
 body {
@@ -84,7 +85,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  touch-action: manipulation;   /* prevent double-tap zoom */
+  touch-action: manipulation;
+  /* prevent double-tap zoom */
   overscroll-behavior: none;
   /* respect notch / home-indicator on iOS */
   padding-top: env(safe-area-inset-top);
@@ -94,7 +96,9 @@ body {
 }
 
 /* Prevent accidental text selection during taps and long presses */
-header, #toolbar, #statusMsg {
+header,
+#toolbar,
+#statusMsg {
   user-select: none;
   -webkit-user-select: none;
 }
@@ -214,7 +218,8 @@ select:hover {
 canvas {
   display: block;
   cursor: crosshair;
-  touch-action: none; /* prevent scroll/zoom when tapping the board */
+  touch-action: none;
+  /* prevent scroll/zoom when tapping the board */
   /* Lift the board off the dark background */
   box-shadow: 0 4px 24px #00000073, 0 1px 6px #0000004D;
 }
@@ -245,12 +250,11 @@ canvas {
   justify-content: center;
 }
 
-/* ── Help button (fixed, top-right) ─────────────────────────────────────────── */
+/* ── Fixed icon buttons (top-right corner) ──────────────────────────────────── */
 
-.help-btn {
+.icon-btn {
   position: fixed;
   top: 20px;
-  right: 20px;
   z-index: 900;
   width: 36px;
   height: 36px;
@@ -269,11 +273,20 @@ canvas {
   justify-content: center;
 }
 
-.help-btn:hover:not(:disabled) {
+.icon-btn:hover:not(:disabled) {
   background: #3A8468;
 }
 
-/* ── Help modal animations ───────────────────────────────────────────────────── */
+.help-btn {
+  right: 20px;
+}
+
+.prefs-btn {
+  right: 64px;
+  font-size: 20px;
+}
+
+/* ── Modal animations ───────────────────────────────────────────────────────── */
 
 @keyframes backdrop-in {
   from {
@@ -319,9 +332,9 @@ canvas {
   }
 }
 
-/* ── Help modal backdrop ─────────────────────────────────────────────────────── */
+/* ── Shared modal backdrop ───────────────────────────────────────────────────── */
 
-.help-backdrop {
+.modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -333,17 +346,17 @@ canvas {
 
 /* display:flex must live here so the browser's [hidden]{display:none} is not
    overridden by a same-specificity class rule. */
-.help-backdrop:not([hidden]) {
+.modal-backdrop:not([hidden]) {
   display: flex;
 }
 
-.help-backdrop.closing {
+.modal-backdrop.closing {
   animation: backdrop-out 150ms ease-in forwards;
 }
 
-/* ── Help modal container ────────────────────────────────────────────────────── */
+/* ── Shared modal box ────────────────────────────────────────────────────────── */
 
-.help-modal {
+.modal-box {
   position: relative;
   max-width: 560px;
   width: calc(100% - 48px);
@@ -357,13 +370,13 @@ canvas {
   animation: modal-in 200ms ease-out forwards;
 }
 
-.help-backdrop.closing .help-modal {
+.modal-backdrop.closing .modal-box {
   animation: modal-out 150ms ease-in forwards;
 }
 
-/* ── Help modal close button ─────────────────────────────────────────────────── */
+/* ── Shared modal close button ───────────────────────────────────────────────── */
 
-.help-close {
+.modal-close {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -377,14 +390,14 @@ canvas {
   border-radius: 4px;
 }
 
-.help-close:hover:not(:disabled) {
+.modal-close:hover:not(:disabled) {
   background: none;
   color: var(--color-error);
 }
 
-/* ── Help modal content ──────────────────────────────────────────────────────── */
+/* ── Shared modal title ──────────────────────────────────────────────────────── */
 
-.help-title {
+.modal-title {
   font-family: 'Cinzel', serif;
   font-size: 24px;
   font-weight: 700;
@@ -392,6 +405,109 @@ canvas {
   text-align: center;
   margin-bottom: 20px;
 }
+
+/* ── Preferences modal ───────────────────────────────────────────────────────── */
+
+.prefs-modal {
+  max-width: 420px;
+}
+
+.prefs-body {
+  font-size: 15px;
+  color: var(--color-text-ink);
+}
+
+.prefs-section-heading {
+  font-weight: 700;
+  color: var(--color-help-subheading);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 18px 0 4px;
+}
+
+.prefs-section-heading:first-child {
+  margin-top: 0;
+}
+
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(46, 111, 87, 0.12);
+}
+
+.pref-row:last-child {
+  border-bottom: none;
+}
+
+.pref-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pref-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-ink);
+}
+
+.pref-desc {
+  font-size: 12px;
+  color: #6A7870;
+}
+
+/* Toggle switch */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #C0BAB0;
+  border-radius: 13px;
+  transition: background 0.2s;
+}
+
+.toggle-track::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.toggle-switch input:checked+.toggle-track {
+  background: var(--color-hedge);
+}
+
+.toggle-switch input:checked+.toggle-track::before {
+  transform: translateX(18px);
+}
+
+/* ── Help modal content ──────────────────────────────────────────────────────── */
 
 .help-body {
   font-size: 15px;
@@ -430,9 +546,12 @@ canvas {
 }
 
 .help-subtle {
-  font-size: 0.9em;          /* smaller than other section headers */
-  color: #4A6B5D;            /* more muted green */
-  font-weight: 500;          /* lighter than other headers */
+  font-size: 0.9em;
+  /* smaller than other section headers */
+  color: #4A6B5D;
+  /* more muted green */
+  font-weight: 500;
+  /* lighter than other headers */
   margin-top: 16px;
   margin-bottom: 4px;
 }
@@ -447,9 +566,7 @@ canvas {
 /* Padding is reduced so the board fills as much of the screen as possible.      */
 
 body.is-phone label[for="genSize"],
-body.is-phone #genSize,
-body.is-phone label[for="genDiff"],
-body.is-phone #genDiff {
+body.is-phone #genSize {
   display: none;
 }
 

@@ -52,12 +52,6 @@
           <option value="12">12×12</option>
           <option value="15">15×15</option>
         </select>
-        <label for="genDiff">Difficulty:</label>
-        <select id="genDiff">
-          <option value="0" selected>Normal</option>
-          <option value="1">Hard</option>
-          <option value="2">Very Hard</option>
-        </select>
         <button id="btnGenerate">New Game</button>
       </div>
     </div>
@@ -67,14 +61,58 @@
     <div id="statusMsg"></div>
   </main>
 
-  <!-- Fixed help button -->
-  <button id="btnHelp" class="help-btn" aria-label="Help / How to Play">?</button>
+  <!-- Fixed action buttons (top-right corner) -->
+  <button id="btnPrefs" class="icon-btn prefs-btn" aria-label="Preferences">⚙</button>
+  <button id="btnHelp" class="icon-btn help-btn" aria-label="Help / How to Play">?</button>
+
+  <!-- Preferences modal -->
+  <div id="prefsBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="prefsTitle" hidden>
+    <div class="modal-box prefs-modal">
+      <button id="prefsClose" class="modal-close" aria-label="Close preferences">&times;</button>
+      <h2 id="prefsTitle" class="modal-title">Preferences</h2>
+      <div class="prefs-body">
+        <p class="prefs-section-heading">New Game</p>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Difficulty</span>
+            <span class="pref-desc">Applied to the next generated puzzle</span>
+          </div>
+          <select id="prefDiff">
+            <option value="0">Normal</option>
+            <option value="1">Hard</option>
+            <option value="2">Very Hard</option>
+          </select>
+        </div>
+        <p class="prefs-section-heading">Display</p>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Show errors</span>
+            <span class="pref-desc">Highlight vertices and cells with conflicts</span>
+          </div>
+          <label class="toggle-switch" aria-label="Show errors">
+            <input type="checkbox" id="prefShowErrors">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Show timer</span>
+            <span class="pref-desc">Display elapsed time while playing</span>
+          </div>
+          <label class="toggle-switch" aria-label="Show timer">
+            <input type="checkbox" id="prefShowTimer">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Help / instructions modal -->
-  <div id="helpBackdrop" class="help-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
-    <div class="help-modal">
-      <button id="helpClose" class="help-close" aria-label="Close instructions">&times;</button>
-      <h2 id="helpTitle" class="help-title">How to Play</h2>
+  <div id="helpBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+    <div class="modal-box">
+      <button id="helpClose" class="modal-close" aria-label="Close instructions">&times;</button>
+      <h2 id="helpTitle" class="modal-title">How to Play</h2>
       <div class="help-body">
         <p class="help-subheading">Goal</p>
         <p>Build a labyrinth that connects the exits with a single winding path.</p>

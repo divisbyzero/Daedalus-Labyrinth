@@ -175,10 +175,12 @@ class Renderer {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
-  render(state, highlightEdge = null) {
+  render(state, highlightEdge = null, prefs = {}) {
     const { ctx } = this;
     const C = state.cells;
     const W = this._margin * 2 + C * this._cellSize;
+    const showErrors = prefs.showErrors !== false;
+    const showTimer = prefs.showTimer !== false;
 
     // Background
     ctx.fillStyle = THEME.background;
@@ -186,12 +188,14 @@ class Renderer {
 
     // 1. Cell fills — cells with three black edges or a premature loop get a
     //    semi-transparent error overlay plus a border stroke.
-    const errorCells = state.getErrorCellSet();
-    for (let r = 0; r < C; r++) {
-      for (let c = 0; c < C; c++) {
-        const cellColor = state.getCellColor(r, c);
-        if (cellColor === CELL.THREESIDES || cellColor === CELL.ERROR) {
-          errorCells.add(`${r},${c}`);
+    const errorCells = showErrors ? state.getErrorCellSet() : new Set();
+    if (showErrors) {
+      for (let r = 0; r < C; r++) {
+        for (let c = 0; c < C; c++) {
+          const cellColor = state.getCellColor(r, c);
+          if (cellColor === CELL.THREESIDES || cellColor === CELL.ERROR) {
+            errorCells.add(`${r},${c}`);
+          }
         }
       }
     }
@@ -245,13 +249,14 @@ class Renderer {
     // 3. Vertices (on top of everything)
     for (let r = 0; r <= C; r++) {
       for (let c = 0; c <= C; c++) {
-        this._drawVertex(ctx, state, r, c);
+        this._drawVertex(ctx, state, r, c, showErrors);
       }
     }
 
     // 4. "Solved!" overlay — drawn last so it appears above everything
     if (state.checkWin() && !state.cheated) {
-      this._drawSolvedOverlay(ctx, C, state.solvedTime || null, state.solvedAt || null);
+      const timeStr = showTimer ? (state.solvedTime || null) : null;
+      this._drawSolvedOverlay(ctx, C, timeStr, state.solvedAt || null);
     }
   }
 
@@ -493,7 +498,7 @@ class Renderer {
     ctx.stroke();
   }
 
-  _drawVertex(ctx, state, r, c) {
+  _drawVertex(ctx, state, r, c, showErrors = true) {
     const x = this.vx(c);
     const y = this.vy(r);
     const gridSize = state.cells;
@@ -506,7 +511,7 @@ class Renderer {
 
     if (info.clue !== null) {
       const max = info.black + info.gray; // max achievable black edges
-      const isViolated = info.black > info.clue || max < info.clue;
+      const isViolated = showErrors && (info.black > info.clue || max < info.clue);
       const isSatisfied = !isViolated && info.black === info.clue;
 
       // Use subtler styling when the circle sits over an enclosed cell

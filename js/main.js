@@ -9,7 +9,6 @@ const btnReset = document.getElementById('btnReset');
 const btnShowSolution = document.getElementById('btnShowSolution');
 const statusMsg = document.getElementById('statusMsg');
 const genSize = document.getElementById('genSize');
-const genDiff = document.getElementById('genDiff');
 const btnGenerate = document.getElementById('btnGenerate');
 
 // ── Help modal ────────────────────────────────────────────────────────────────
@@ -65,6 +64,104 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
   setTimeout(openHelpModal, 400);
 }
 
+// ── Preferences ──────────────────────────────────────────────────────────────────
+
+const PREFS_KEY = 'daedalus_prefs';
+const prefs = { difficulty: 0, showErrors: true, showTimer: true };
+
+function loadPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+    if (typeof saved.difficulty === 'number') prefs.difficulty = saved.difficulty;
+    if (typeof saved.showErrors === 'boolean') prefs.showErrors = saved.showErrors;
+    if (typeof saved.showTimer === 'boolean') prefs.showTimer = saved.showTimer;
+  } catch (_) { }
+}
+
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
+// Prefs modal DOM refs
+const btnPrefs = document.getElementById('btnPrefs');
+const prefsBackdrop = document.getElementById('prefsBackdrop');
+const prefsClose = document.getElementById('prefsClose');
+const prefDiff = document.getElementById('prefDiff');
+const prefShowErrors = document.getElementById('prefShowErrors');
+const prefShowTimer = document.getElementById('prefShowTimer');
+
+function syncPrefsUI() {
+  prefDiff.value = String(prefs.difficulty);
+  prefShowErrors.checked = prefs.showErrors;
+  prefShowTimer.checked = prefs.showTimer;
+}
+
+function openPrefsModal() {
+  syncPrefsUI();
+  prefsBackdrop.removeAttribute('hidden');
+  prefsBackdrop.classList.remove('closing');
+  prefsClose.focus();
+  document.addEventListener('keydown', handlePrefsKey);
+  pauseTimer();
+}
+
+function closePrefsModal() {
+  prefsBackdrop.classList.add('closing');
+  document.removeEventListener('keydown', handlePrefsKey);
+  setTimeout(() => {
+    prefsBackdrop.setAttribute('hidden', '');
+    prefsBackdrop.classList.remove('closing');
+    resumeTimer();
+  }, CLOSE_DURATION_MS);
+}
+
+function handlePrefsKey(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closePrefsModal();
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const focusable = [prefsClose, prefDiff, prefShowErrors, prefShowTimer];
+    const idx = focusable.indexOf(document.activeElement);
+    const next = e.shiftKey
+      ? (idx - 1 + focusable.length) % focusable.length
+      : (idx + 1) % focusable.length;
+    focusable[next].focus();
+  }
+}
+
+btnPrefs.addEventListener('click', openPrefsModal);
+prefsClose.addEventListener('click', closePrefsModal);
+prefsBackdrop.addEventListener('click', (e) => {
+  if (e.target === prefsBackdrop) closePrefsModal();
+});
+
+prefDiff.addEventListener('change', () => {
+  prefs.difficulty = parseInt(prefDiff.value, 10);
+  savePrefs();
+});
+
+prefShowErrors.addEventListener('change', () => {
+  prefs.showErrors = prefShowErrors.checked;
+  savePrefs();
+  if (state) redraw();
+});
+
+prefShowTimer.addEventListener('change', () => {
+  prefs.showTimer = prefShowTimer.checked;
+  savePrefs();
+  if (!prefs.showTimer) {
+    toolbarCenter.hidden = true;
+  } else if (!timerDone && timerStart !== null) {
+    toolbarCenter.hidden = false;
+  }
+  if (state) redraw();
+});
+
+loadPrefs();
+
 // ── Phone detection ───────────────────────────────────────────────────────────
 // Use the shorter screen dimension so landscape orientation stays restricted too.
 
@@ -97,7 +194,7 @@ function startTimer() {
   timerDone = false;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
-  toolbarCenter.hidden = false;
+  toolbarCenter.hidden = !prefs.showTimer;
   if (state) { state.solvedTime = null; state.solvedAt = null; }
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
@@ -164,7 +261,7 @@ function getSolutionCountUpTo2(s) {
 }
 
 function redraw() {
-  renderer.render(state, pressEdge);
+  renderer.render(state, pressEdge, prefs);
   updateButtons();
   updateStatus();
   if (state.checkWin() && !state.cheated) {
@@ -266,7 +363,7 @@ function cancelPress() {
 
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
-  if (!helpBackdrop.hasAttribute('hidden')) return;
+  if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
   startPress(e.clientX, e.clientY, e.button === 0 && !e.ctrlKey);
 });
 
@@ -284,7 +381,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  if (!helpBackdrop.hasAttribute('hidden')) return;
+  if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
   const t = e.changedTouches[0];
   startPress(t.clientX, t.clientY, true, true); // true = touch event
 }, { passive: false });
@@ -340,7 +437,7 @@ btnShowSolution.addEventListener('click', () => {
 
 function doGenerate() {
   const cells = IS_PHONE ? 6 : parseInt(genSize.value, 10);
-  const diff = parseInt(genDiff.value, 10);
+  const diff = prefs.difficulty;
   statusMsg.textContent = 'Generating…';
   statusMsg.style.color = '';
   statusMsg.style.background = '';
@@ -371,6 +468,7 @@ btnGenerate.addEventListener('click', doGenerate);
 
 document.addEventListener('keydown', (e) => {
   if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open — let handleHelpKey handle it
+  if (!prefsBackdrop.hasAttribute('hidden')) return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
     state.undo(); redraw();
