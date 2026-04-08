@@ -67,7 +67,8 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 
 const PREFS_KEY = 'daedalus_prefs';
 const PREFS_VERSION = 1;
-const prefs = { difficulty: 0, boardSize: 6, showErrors: true, showTimer: true };
+const IS_PHONE_DEFAULT_SIZE = Math.min(screen.width, screen.height) <= 480 ? 6 : 10;
+const prefs = { difficulty: 0, boardSize: IS_PHONE_DEFAULT_SIZE, showErrors: true, showTimer: true };
 
 function loadPrefs() {
   try {
@@ -176,6 +177,15 @@ loadPrefs();
 
 const IS_PHONE = Math.min(screen.width, screen.height) <= 480;
 if (IS_PHONE) document.body.classList.add('is-phone');
+
+// On phones, limit board size options to 7×7 max.
+if (IS_PHONE) {
+  Array.from(prefSize.options)
+    .filter(o => parseInt(o.value, 10) > 7)
+    .forEach(o => o.remove());
+  // Clamp any saved boardSize that exceeds the phone limit.
+  if (prefs.boardSize > 7) { prefs.boardSize = 6; savePrefs(); }
+}
 
 // ── App state ─────────────────────────────────────────────────────────────────
 
