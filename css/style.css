@@ -254,7 +254,7 @@ canvas {
 
 .icon-btn {
   position: fixed;
-  top: 20px;
+  top: calc(env(safe-area-inset-top, 0px) + 20px);
   z-index: 900;
   width: 36px;
   height: 36px;
@@ -271,6 +271,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .icon-btn:hover:not(:disabled) {
@@ -278,11 +279,11 @@ canvas {
 }
 
 .help-btn {
-  right: 20px;
+  right: calc(env(safe-area-inset-right, 0px) + 20px);
 }
 
 .prefs-btn {
-  right: 64px;
+  right: calc(env(safe-area-inset-right, 0px) + 64px);
   font-size: 20px;
 }
 
@@ -571,12 +572,28 @@ body.is-phone #genSize {
 }
 
 body.is-phone header {
-  padding: 8px 16px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 body.is-phone header h1 {
   font-size: 1.3rem;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  flex: 1;
+  text-align: center;
+}
+
+/* On phones the icon buttons move into the header flow — undo fixed positioning */
+body.is-phone .icon-btn {
+  position: relative;
+  top: auto;
+  right: auto;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
 }
 
 body.is-phone main {
