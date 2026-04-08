@@ -67,7 +67,7 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 
 const PREFS_KEY = 'daedalus_prefs';
 const PREFS_VERSION = 1;
-const IS_PHONE_DEFAULT_SIZE = Math.min(screen.width, screen.height) <= 480 ? 6 : 10;
+const IS_PHONE_DEFAULT_SIZE = Math.min(screen.width, screen.height) <= 480 ? 7 : 10;
 const prefs = { difficulty: 0, boardSize: IS_PHONE_DEFAULT_SIZE, showErrors: true, showTimer: true };
 
 function loadPrefs() {
