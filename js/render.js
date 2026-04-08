@@ -128,6 +128,7 @@ class Renderer {
     this.ctx = canvas.getContext('2d');
     this.dpr = window.devicePixelRatio || 1;
     this._cellSize = THEME.cellSize;
+    this._margin = THEME.margin;
     this._hitTolerance = THEME.hitTolerance;
   }
 
@@ -136,12 +137,22 @@ class Renderer {
   /** Resize the canvas to fit a board with `cells` cells per side. */
   resize(cells) {
     this._lastCells = cells;
-    // Scale cell size down if the screen is too narrow; cap at the design default.
-    const availableWidth = window.innerWidth - 32; // 16px body padding each side
-    this._cellSize = Math.min(THEME.cellSize, Math.floor((availableWidth - THEME.margin * 2) / cells));
+    // Read available width from the wrapper (which has width:100%, so this is
+    // the true content width after CSS padding is applied).
+    const availableWidth = this.canvas.parentElement.clientWidth;
+    // Solve cellSize and margin simultaneously so the canvas fills the wrapper
+    // while keeping margin/cellSize at the design ratio (42/60 = 0.7), which
+    // ensures portal arches always clear the canvas edge.
+    // From: (2r + cells) * cellSize = availableWidth  →  cellSize = avail / (2r + cells)
+    const r = THEME.margin / THEME.cellSize; // 0.7
+    const fittedCellSize = Math.floor(availableWidth / (2 * r + cells));
+    this._cellSize = Math.min(THEME.cellSize, fittedCellSize);
+    this._margin = this._cellSize < THEME.cellSize
+      ? Math.floor((availableWidth - cells * this._cellSize) / 2)
+      : THEME.margin;
     // Slightly larger hit zone for finger taps on phones.
     this._hitTolerance = Math.min(screen.width, screen.height) <= 480 ? 18 : THEME.hitTolerance;
-    const total = THEME.margin * 2 + cells * this._cellSize;
+    const total = this._margin * 2 + cells * this._cellSize;
     const dpr = this.dpr;
     this.canvas.width = total * dpr;
     this.canvas.height = total * dpr;
@@ -152,15 +163,15 @@ class Renderer {
 
   // ── Coordinate helpers ────────────────────────────────────────────────────
 
-  vx(c) { return THEME.margin + c * this._cellSize; }
-  vy(r) { return THEME.margin + r * this._cellSize; }
+  vx(c) { return this._margin + c * this._cellSize; }
+  vy(r) { return this._margin + r * this._cellSize; }
 
   // ── Main render ───────────────────────────────────────────────────────────
 
   render(state) {
     const { ctx } = this;
     const C = state.cells;
-    const W = THEME.margin * 2 + C * this._cellSize;
+    const W = this._margin * 2 + C * this._cellSize;
 
     // Background
     ctx.fillStyle = THEME.background;
@@ -180,10 +191,10 @@ class Renderer {
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
         ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
-        ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
+        ctx.fillRect(this.vx(c), this.vy(r), this._cellSize, this._cellSize);
         if (errorCells.has(`${r},${c}`)) {
           ctx.fillStyle = THEME.cellError;
-          ctx.fillRect(this.vx(c), this.vy(r), THEME.cellSize, THEME.cellSize);
+          ctx.fillRect(this.vx(c), this.vy(r), this._cellSize, this._cellSize);
         }
       }
     }
@@ -237,8 +248,8 @@ class Renderer {
   // ── Drawing helpers ───────────────────────────────────────────────────────
 
   _drawSolvedOverlay(ctx, gridSize, timeStr, solvedAt) {
-    const cx = THEME.margin + gridSize * THEME.cellSize / 2;
-    const cy = THEME.margin + gridSize * THEME.cellSize / 2;
+    const cx = this._margin + gridSize * this._cellSize / 2;
+    const cy = this._margin + gridSize * this._cellSize / 2;
 
     // Ease-out scale animation: 0.82 → 1.0 over 350ms
     const ANIM_MS = 350;
@@ -400,7 +411,7 @@ class Renderer {
 
     if (isH) {
       // Center x is always the midpoint of the door opening, not a function of rad.
-      cx = this.vx(c) + THEME.cellSize / 2;
+      cx = this.vx(c) + this._cellSize / 2;
       if (r === 0) {
         // Top border — dome extends upward
         cy = this.vy(0);
@@ -412,7 +423,7 @@ class Renderer {
       }
     } else {
       // Center y is always the midpoint of the door opening, not a function of rad.
-      cy = this.vy(r) + THEME.cellSize / 2;
+      cy = this.vy(r) + this._cellSize / 2;
       if (c === 0) {
         // Left border — dome extends leftward
         cx = this.vx(0);

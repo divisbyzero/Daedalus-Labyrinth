@@ -191,6 +191,7 @@ select:hover {
   justify-content: center;
   align-items: center;
   margin-top: 6px;
+  width: 100%;
 }
 
 canvas {
@@ -425,11 +426,21 @@ canvas {
 }
 
 /* ── Phone layout ────────────────────────────────────────────────────────────── */
-/* Size and difficulty controls are hidden on phones — board is fixed at 6×6. */
+/* Size and difficulty controls are hidden on phones — board is fixed at 6×6.   */
+/* Padding is reduced so the board fills as much of the screen as possible.      */
 
 body.is-phone label[for="genSize"],
 body.is-phone #genSize,
 body.is-phone label[for="genDiff"],
 body.is-phone #genDiff {
   display: none;
+}
+
+body.is-phone main {
+  padding: 4px;
+}
+
+body.is-phone #toolbar {
+  padding: 6px 4px;
+  gap: 8px;
 }
