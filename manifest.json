@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "phoneicon.png",
+      "src": "phoneicon.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "phoneicon.png",
+      "src": "phoneicon.png?v=2",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
