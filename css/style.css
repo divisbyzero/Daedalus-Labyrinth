@@ -147,7 +147,7 @@ main {
   gap: 6px;
 }
 
-#toolbarCenter {
+#toolbarCenter:not([hidden]) {
   display: flex;
   align-items: center;
   gap: 12px;

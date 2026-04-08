@@ -67,11 +67,13 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 // ── Preferences ──────────────────────────────────────────────────────────────────
 
 const PREFS_KEY = 'daedalus_prefs';
+const PREFS_VERSION = 1;
 const prefs = { difficulty: 0, showErrors: true, showTimer: true };
 
 function loadPrefs() {
   try {
     const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+    if (saved.version !== PREFS_VERSION) return; // stale/unversioned save — use defaults
     if (typeof saved.difficulty === 'number') prefs.difficulty = saved.difficulty;
     if (typeof saved.showErrors === 'boolean') prefs.showErrors = saved.showErrors;
     if (typeof saved.showTimer === 'boolean') prefs.showTimer = saved.showTimer;
@@ -79,7 +81,7 @@ function loadPrefs() {
 }
 
 function savePrefs() {
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  localStorage.setItem(PREFS_KEY, JSON.stringify({ version: PREFS_VERSION, ...prefs }));
 }
 
 // Prefs modal DOM refs
