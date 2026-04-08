@@ -202,39 +202,100 @@ function applySolvedEdgesToState(s, solved) {
   s._redoStack = [];
 }
 
-// ── Mouse input ───────────────────────────────────────────────────────────────
+// ── Input handling (mouse + touch, with long-press → delete) ─────────────────
+//
+// Short press/tap : cycle the edge (same as before)
+// Long press/hold : set the edge directly to Removed (EDGE_NONE), undoable
+//
+// Works identically on desktop and phone.
+
+const LONG_PRESS_MS = 500;  // ms to hold before long-press fires
+const MOVE_CANCEL_PX = 8;   // pixels of movement that cancels the press
+
+let pressTimer = null;
+let pressEdge = null;
+let pressForward = true;
+let pressStartX = 0;
+let pressStartY = 0;
+
+function getCanvasXY(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (canvas.offsetWidth / rect.width),
+    y: (clientY - rect.top) * (canvas.offsetHeight / rect.height),
+  };
+}
+
+function startPress(clientX, clientY, forward) {
+  cancelPress();
+  pressForward = forward;
+  pressStartX = clientX;
+  pressStartY = clientY;
+  const { x, y } = getCanvasXY(clientX, clientY);
+  pressEdge = renderer ? renderer.findEdge(x, y, state) : null;
+  if (!pressEdge) return;
+  pressTimer = setTimeout(() => {
+    pressTimer = null;
+    state.setEdge(pressEdge.isH, pressEdge.r, pressEdge.c, EDGE_NONE);
+    pressEdge = null;
+    redraw();
+  }, LONG_PRESS_MS);
+}
+
+function commitShortPress() {
+  if (!pressTimer || !pressEdge) return; // long press already fired, or nothing pending
+  clearTimeout(pressTimer);
+  pressTimer = null;
+  state.clickEdge(pressEdge.isH, pressEdge.r, pressEdge.c, pressForward);
+  pressEdge = null;
+  redraw();
+}
+
+function cancelPress() {
+  if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+  pressEdge = null;
+}
+
+// ── Mouse ─────────────────────────────────────────────────────────────────────
 
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
-  if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open
-
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.offsetWidth / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.offsetHeight / rect.height);
-
-  const edge = renderer.findEdge(mx, my, state);
-  if (!edge) return;
-
-  const forward = (e.button === 0 && !e.ctrlKey);
-  state.clickEdge(edge.isH, edge.r, edge.c, forward);
-  redraw();
+  if (!helpBackdrop.hasAttribute('hidden')) return;
+  startPress(e.clientX, e.clientY, e.button === 0 && !e.ctrlKey);
 });
 
+canvas.addEventListener('mousemove', (e) => {
+  if (!pressTimer) return;
+  if (Math.hypot(e.clientX - pressStartX, e.clientY - pressStartY) > MOVE_CANCEL_PX)
+    cancelPress();
+});
+
+canvas.addEventListener('mouseleave', cancelPress);
+window.addEventListener('mouseup', commitShortPress);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// Touch support (phones) — tap cycles forward; use Undo for corrections.
+// ── Touch ─────────────────────────────────────────────────────────────────────
+
 canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault(); // block scroll and the synthesised mouse event
+  e.preventDefault();
   if (!helpBackdrop.hasAttribute('hidden')) return;
-  const touch = e.changedTouches[0];
-  const rect = canvas.getBoundingClientRect();
-  const mx = (touch.clientX - rect.left) * (canvas.offsetWidth / rect.width);
-  const my = (touch.clientY - rect.top) * (canvas.offsetHeight / rect.height);
-  const edge = renderer.findEdge(mx, my, state);
-  if (!edge) return;
-  state.clickEdge(edge.isH, edge.r, edge.c, true); // always forward on touch
-  redraw();
+  const t = e.changedTouches[0];
+  startPress(t.clientX, t.clientY, true); // touch always cycles forward
 }, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  commitShortPress();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (!pressTimer) return;
+  const t = e.changedTouches[0];
+  if (Math.hypot(t.clientX - pressStartX, t.clientY - pressStartY) > MOVE_CANCEL_PX)
+    cancelPress();
+}, { passive: true });
+
+canvas.addEventListener('touchcancel', cancelPress);
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
