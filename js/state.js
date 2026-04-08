@@ -316,7 +316,7 @@ class GameState {
 
   /**
    * Returns a Set of "r,c" keys for every cell that is part of a premature
-   * loop in the labyrinth path.
+   * loop in the labyrinth path, including cells enclosed inside such a loop.
    *
    * The labyrinth path is modelled as a graph where:
    *   - nodes  = cells
@@ -325,7 +325,9 @@ class GameState {
    *
    * A premature loop exists when this doorway graph contains a cycle while
    * gray (undecided) edges still remain in the puzzle.  All cells in such a
-   * cycle-containing component are flagged as errors.
+   * cycle-containing component are flagged as errors, as are any cells that
+   * are topologically enclosed inside the loop (surrounded on all traversable
+   * sides by loop cells).
    *
    * Note: cycles in the black-edge graph (e.g. the perimeter, walled cells)
    * are completely fine — only cycles in the cell-path graph are errors.
@@ -357,8 +359,72 @@ class GameState {
         }
       }
       edges /= 2;
-      if (edges >= comp.length)         // cycle present
+      // Flag the component if it contains a cycle (premature loop) OR any cell
+      // that is a definite dead end: CELL.THREESIDES means 3 black walls + 1
+      // opening, so the path can never continue from it.  Any path segment
+      // connected to such a dead end is provably wrong regardless of the rest
+      // of the puzzle state.
+      const hasCycle = edges >= comp.length;
+      const hasDeadEnd = comp.some(v => {
+        const r = Math.floor(v / C);
+        const c = v % C;
+        return this.getCellColor(r, c) === CELL.THREESIDES;
+      });
+      if (hasCycle || hasDeadEnd) {
         for (const v of comp) errorIdx.add(v);
+      }
+    }
+
+    // Also flag cells that are enclosed *inside* a premature loop.
+    // A cell is enclosed if it cannot be reached from outside the board
+    // by moving through adjacent cells without crossing a removed edge
+    // (i.e. without stepping through a loop-path doorway).
+    // We flood-fill *outward* from all cells reachable from outside;
+    // anything left unreached that is not already an error cell is enclosed.
+    if (errorIdx.size > 0) {
+      // Build a "non-doorway adjacency" grid: two cells are neighbors here
+      // when their shared internal edge is NOT removed (black or gray).
+      // Cells can also be "outside" if they are on the grid perimeter.
+      const reached = new Uint8Array(N);
+      const ck = (r, c) => r * C + c;
+      const floodQueue = [];
+
+      // Seed the flood from all perimeter cells.
+      for (let r = 0; r < C; r++) {
+        for (let c = 0; c < C; c++) {
+          if (r === 0 || r === C - 1 || c === 0 || c === C - 1) {
+            if (!reached[ck(r, c)]) {
+              reached[ck(r, c)] = 1;
+              floodQueue.push(ck(r, c));
+            }
+          }
+        }
+      }
+
+      while (floodQueue.length) {
+        const idx = floodQueue.pop();
+        const r = Math.floor(idx / C);
+        const c = idx % C;
+        // Move to each of the 4 orthogonal neighbors, provided there is no
+        // removed edge between this cell and that neighbor.
+        const moves = [
+          [r - 1, c, () => r > 0 && this.hEdges[r][c] !== EDGE_NONE],
+          [r + 1, c, () => r < C - 1 && this.hEdges[r + 1][c] !== EDGE_NONE],
+          [r, c - 1, () => c > 0 && this.vEdges[r][c] !== EDGE_NONE],
+          [r, c + 1, () => c < C - 1 && this.vEdges[r][c + 1] !== EDGE_NONE],
+        ];
+        for (const [nr, nc, passable] of moves) {
+          if (passable() && !reached[ck(nr, nc)]) {
+            reached[ck(nr, nc)] = 1;
+            floodQueue.push(ck(nr, nc));
+          }
+        }
+      }
+
+      // Any cell not reached by the flood is enclosed inside a loop.
+      for (let i = 0; i < N; i++) {
+        if (!reached[i]) errorIdx.add(i);
+      }
     }
 
     const result = new Set();
