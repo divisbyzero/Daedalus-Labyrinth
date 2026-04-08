@@ -217,6 +217,7 @@ let pressEdge = null;
 let pressForward = true;
 let pressStartX = 0;
 let pressStartY = 0;
+let isTouch = false;
 
 function getCanvasXY(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -226,15 +227,16 @@ function getCanvasXY(clientX, clientY) {
   };
 }
 
-function startPress(clientX, clientY, forward) {
+function startPress(clientX, clientY, forward, isTouchEvent = false) {
   cancelPress();
+  isTouch = isTouchEvent;
   pressForward = forward;
   pressStartX = clientX;
   pressStartY = clientY;
   const { x, y } = getCanvasXY(clientX, clientY);
   pressEdge = renderer ? renderer.findEdge(x, y, state) : null;
   if (!pressEdge) return;
-  redraw(); // show highlight immediately
+  if (isTouch) redraw(); // show highlight immediately only for touch
   pressTimer = setTimeout(() => {
     pressTimer = null;
     if (navigator.vibrate) navigator.vibrate(40);
@@ -284,7 +286,7 @@ canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   if (!helpBackdrop.hasAttribute('hidden')) return;
   const t = e.changedTouches[0];
-  startPress(t.clientX, t.clientY, true); // touch always cycles forward
+  startPress(t.clientX, t.clientY, true, true); // true = touch event
 }, { passive: false });
 
 canvas.addEventListener('touchend', (e) => {
