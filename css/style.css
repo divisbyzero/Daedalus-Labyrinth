@@ -252,7 +252,7 @@ canvas {
     linear-gradient(rgba(244, 241, 232, 0.12) 1px, transparent 1px),
     linear-gradient(135deg, rgba(46, 111, 87, 0.94), rgba(63, 84, 76, 0.96));
   background-size: auto, 42px 42px, 42px 42px, auto;
-  background-position: 0 0, center center, center center, 0 0;
+  background-position: 0 0, 14px 14px, 14px 14px, 0 0;
   color: var(--color-text-light);
   border-radius: 10px;
   overflow: hidden;
@@ -264,7 +264,7 @@ canvas {
   inset: 14px;
   border-radius: 8px;
   background:
-    repeating-linear-gradient(0deg,
+    repeating-linear-gradient(180deg,
       rgba(244, 241, 232, 0.09) 0 39px,
       rgba(34, 48, 43, 0.18) 39px 42px),
     repeating-linear-gradient(90deg,
