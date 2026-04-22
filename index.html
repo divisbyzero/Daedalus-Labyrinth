@@ -34,6 +34,7 @@
         <button id="btnUndo" title="Undo (Ctrl+Z)">Undo</button>
         <button id="btnRedo" title="Redo (Ctrl+Y)">Redo</button>
         <button id="btnReset">Reset</button>
+        <button id="btnPause" aria-pressed="false">Pause</button>
         <button id="btnShowSolution">Show solution</button>
         <button id="btnGenerate">New Game</button>
       </div>
@@ -43,6 +44,12 @@
     </div>
     <div id="canvasWrapper">
       <canvas id="gameCanvas"></canvas>
+      <div id="pauseOverlay" hidden>
+        <div class="pause-panel">
+          <p id="pauseMessage">Game paused</p>
+          <button id="btnResumeOverlay">Resume</button>
+        </div>
+      </div>
     </div>
     <div id="statusMsg"></div>
   </main>

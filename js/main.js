@@ -6,9 +6,14 @@ const canvas = document.getElementById('gameCanvas');
 const btnUndo = document.getElementById('btnUndo');
 const btnRedo = document.getElementById('btnRedo');
 const btnReset = document.getElementById('btnReset');
+const btnPause = document.getElementById('btnPause');
 const btnShowSolution = document.getElementById('btnShowSolution');
 const statusMsg = document.getElementById('statusMsg');
 const btnGenerate = document.getElementById('btnGenerate');
+const canvasWrapper = document.getElementById('canvasWrapper');
+const pauseOverlay = document.getElementById('pauseOverlay');
+const pauseMessage = document.getElementById('pauseMessage');
+const btnResumeOverlay = document.getElementById('btnResumeOverlay');
 
 // ── Help modal ────────────────────────────────────────────────────────────────
 
@@ -24,7 +29,7 @@ function openHelpModal() {
   helpBackdrop.classList.remove('closing');
   helpClose.focus();
   document.addEventListener('keydown', handleHelpKey);
-  pauseTimer();
+  requestPause('modal-help');
 }
 
 function closeHelpModal() {
@@ -33,7 +38,7 @@ function closeHelpModal() {
   setTimeout(() => {
     helpBackdrop.setAttribute('hidden', '');
     helpBackdrop.classList.remove('closing');
-    resumeTimer();
+    clearPause('modal-help');
   }, CLOSE_DURATION_MS);
 }
 
@@ -107,7 +112,7 @@ function openPrefsModal() {
   prefsBackdrop.classList.remove('closing');
   prefsClose.focus();
   document.addEventListener('keydown', handlePrefsKey);
-  pauseTimer();
+  requestPause('modal-prefs');
 }
 
 function closePrefsModal() {
@@ -116,7 +121,7 @@ function closePrefsModal() {
   setTimeout(() => {
     prefsBackdrop.setAttribute('hidden', '');
     prefsBackdrop.classList.remove('closing');
-    resumeTimer();
+    clearPause('modal-prefs');
   }, CLOSE_DURATION_MS);
 }
 
@@ -200,6 +205,59 @@ let timerStart = null;
 let timerInterval = null;
 let timerDone = false;
 let timerPausedAt = null;
+const pauseReasons = new Set();
+
+function isGamePaused() {
+  return pauseReasons.size > 0;
+}
+
+function getPauseMessage() {
+  if (pauseReasons.has('visibility')) return 'Game paused because the page lost focus';
+  return 'Game paused';
+}
+
+function updatePauseUI() {
+  const paused = isGamePaused();
+  const canvasWidth = canvas.offsetWidth;
+  const canvasHeight = canvas.offsetHeight;
+
+  if (canvasWidth > 0 && canvasHeight > 0) {
+    pauseOverlay.style.width = `${canvasWidth}px`;
+    pauseOverlay.style.height = `${canvasHeight}px`;
+  }
+
+  canvasWrapper.classList.toggle('paused', paused);
+  pauseOverlay.hidden = !paused;
+  pauseMessage.textContent = getPauseMessage();
+  btnPause.textContent = paused ? 'Resume' : 'Pause';
+  btnPause.setAttribute('aria-pressed', String(paused));
+}
+
+function requestPause(reason) {
+  if (pauseReasons.has(reason)) return;
+  pauseReasons.add(reason);
+  cancelPress();
+  pauseTimer();
+  updatePauseUI();
+}
+
+function clearPause(reason) {
+  if (!pauseReasons.has(reason)) return;
+  pauseReasons.delete(reason);
+  if (!isGamePaused()) {
+    resumeTimer();
+  }
+  updatePauseUI();
+}
+
+function toggleManualPause() {
+  if (isGamePaused()) {
+    clearPause('manual');
+    clearPause('visibility');
+    return;
+  }
+  requestPause('manual');
+}
 
 function formatTime(totalSeconds) {
   const m = Math.floor(totalSeconds / 60);
@@ -211,10 +269,15 @@ function startTimer() {
   stopTimer();
   timerStart = Date.now();
   timerDone = false;
+  timerPausedAt = null;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
   toolbarCenter.hidden = !prefs.showTimer;
   if (state) { state.solvedTime = null; state.solvedAt = null; }
+  if (isGamePaused()) {
+    updatePauseUI();
+    return;
+  }
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     timerDisplay.textContent = formatTime(elapsed);
@@ -229,13 +292,13 @@ function stopTimer() {
 }
 
 function pauseTimer() {
-  if (timerInterval === null || timerDone) return;
+  if (timerInterval === null || timerDone || timerStart === null) return;
   timerPausedAt = Date.now();
   stopTimer();
 }
 
 function resumeTimer() {
-  if (timerInterval !== null || timerDone || timerStart === null) return;
+  if (timerInterval !== null || timerDone || timerStart === null || isGamePaused()) return;
   // Shift timerStart forward by however long we were paused.
   if (timerPausedAt !== null) {
     timerStart += Date.now() - timerPausedAt;
@@ -281,6 +344,7 @@ function getSolutionCountUpTo2(s) {
 
 function redraw() {
   renderer.render(state, pressEdge, prefs);
+  updatePauseUI();
   updateButtons();
   updateStatus();
   if (state.checkWin() && !state.cheated) {
@@ -382,6 +446,7 @@ function cancelPress() {
 
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
+  if (isGamePaused()) return;
   if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
   startPress(e.clientX, e.clientY, e.button === 0 && !e.ctrlKey);
 });
@@ -400,10 +465,14 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
+  if (isGamePaused()) return;
   if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
   const t = e.changedTouches[0];
   startPress(t.clientX, t.clientY, true, true); // true = touch event
 }, { passive: false });
+
+btnPause.addEventListener('click', toggleManualPause);
+btnResumeOverlay.addEventListener('click', toggleManualPause);
 
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
@@ -488,13 +557,27 @@ btnGenerate.addEventListener('click', doGenerate);
 document.addEventListener('keydown', (e) => {
   if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open — let handleHelpKey handle it
   if (!prefsBackdrop.hasAttribute('hidden')) return;
+  if (isGamePaused() && e.key !== 'Escape') return;
   if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
     e.preventDefault();
     state.undo(); redraw();
   } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
     e.preventDefault();
     state.redo(); redraw();
+  } else if (e.key === 'Escape' && isGamePaused()) {
+    e.preventDefault();
+    toggleManualPause();
   }
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    requestPause('visibility');
+  }
+});
+
+window.addEventListener('blur', () => {
+  requestPause('visibility');
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
