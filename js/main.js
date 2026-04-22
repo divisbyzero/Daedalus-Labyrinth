@@ -212,8 +212,7 @@ function isGamePaused() {
 }
 
 function getPauseMessage() {
-  if (pauseReasons.has('visibility')) return 'Game paused because the page lost focus';
-  return 'Game paused';
+  return 'Game Paused';
 }
 
 function updatePauseUI() {
