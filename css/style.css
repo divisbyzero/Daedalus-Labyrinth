@@ -147,6 +147,11 @@ main {
   gap: 6px;
 }
 
+body.is-phone .toolbar-group--secondary {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
 #toolbarCenter:not([hidden]) {
   display: flex;
   justify-content: center;
