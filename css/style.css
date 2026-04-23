@@ -243,16 +243,9 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
   text-align: center;
   transform: translate(-50%, -50%);
-  background:
-    linear-gradient(rgba(244, 241, 232, 0.08), rgba(244, 241, 232, 0.08)),
-    linear-gradient(90deg, rgba(244, 241, 232, 0.12) 1px, transparent 1px),
-    linear-gradient(rgba(244, 241, 232, 0.12) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(46, 111, 87, 0.94), rgba(63, 84, 76, 0.96));
-  background-size: auto, 42px 42px, 42px 42px, auto;
-  background-position: 0 0, 14px 14px, 14px 14px, 0 0;
+  background-color: #2C6048;
   color: var(--color-text-light);
   border-radius: 10px;
   overflow: hidden;
@@ -261,17 +254,13 @@ canvas {
 #pauseOverlay::before {
   content: '';
   position: absolute;
-  inset: 14px;
-  border-radius: 8px;
-  background:
-    repeating-linear-gradient(180deg,
-      rgba(244, 241, 232, 0.09) 0 39px,
-      rgba(34, 48, 43, 0.18) 39px 42px),
-    repeating-linear-gradient(90deg,
-      rgba(244, 241, 232, 0.05) 0 39px,
-      rgba(34, 48, 43, 0.14) 39px 42px),
-    linear-gradient(135deg, rgba(244, 241, 232, 0.18), rgba(244, 241, 232, 0.02));
-  box-shadow: inset 0 0 0 1px rgba(244, 241, 232, 0.12);
+  inset: var(--pause-margin, 42px);
+  background-color: #3A7060;
+  background-image:
+    linear-gradient(rgba(244, 241, 232, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(244, 241, 232, 0.12) 1px, transparent 1px);
+  background-size: var(--pause-cell, 60px) var(--pause-cell, 60px);
+  background-position: 0 0;
 }
 
 .pause-panel {

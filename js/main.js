@@ -225,6 +225,11 @@ function updatePauseUI() {
     pauseOverlay.style.height = `${canvasHeight}px`;
   }
 
+  if (renderer) {
+    pauseOverlay.style.setProperty('--pause-cell', `${renderer._cellSize}px`);
+    pauseOverlay.style.setProperty('--pause-margin', `${renderer._margin}px`);
+  }
+
   canvasWrapper.classList.toggle('paused', paused);
   pauseOverlay.hidden = !paused;
   pauseMessage.textContent = getPauseMessage();
