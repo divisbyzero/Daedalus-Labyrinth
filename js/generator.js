@@ -409,7 +409,7 @@ function _extractAllClues(hS, vS, N) {
 function _countOrSolve(clueGrid, N, limit, captureFirst, diff, entry, exit) {
   if (limit === undefined) limit = 2;
   if (captureFirst === undefined) captureFirst = false;
-  if (diff === undefined) diff = DIFF_HARD;
+  if (diff === undefined) diff = DIFF_VERY_HARD;
   const isOpen = !!(entry && exit);
   let firstSolution = null;
 
@@ -523,12 +523,12 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff, entry, exit) {
         }
       }
 
-      // Rule 3a (DIFF_NORMAL+): Premature cycle prevention.
+      // Rule 3a (DIFF_HARD+): Premature cycle prevention.
       // If setting a GRAY edge to NONE would create a closed cycle that
       // doesn't include all currently-active cells, force it to BLACK.
       // Once a cycle is sealed (all members at degree 2), no new cells
       // can join, so any stranded active cells would form separate loops.
-      if (diff >= DIFF_NORMAL) {
+      if (diff >= DIFF_HARD) {
         const par = new Int32Array(N * N);
         const rnk = new Uint8Array(N * N);
         const csz = new Int32Array(N * N);
@@ -776,9 +776,9 @@ function _countOrSolve(clueGrid, N, limit, captureFirst, diff, entry, exit) {
       return count + 1;
     }
 
-    // At EASY and NORMAL difficulty, no backtracking — if propagation
+    // Below Very Hard difficulty, no backtracking — if propagation
     // can't resolve all edges, the puzzle is considered ambiguous.
-    if (diff < DIFF_HARD) return count;
+    if (diff < DIFF_VERY_HARD) return count;
 
     const [isH, r, c] = gray;
     const s = snap();
@@ -836,6 +836,8 @@ function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
 
   for (const [r, c] of positions) {
     if (clueGrid[r][c] === null) continue;
+    // Beginner mode keeps ~half of removable clues to give players more guidance.
+    if (diff === DIFF_BEGINNER && Math.random() < 0.5) continue;
     const saved = clueGrid[r][c];
     clueGrid[r][c] = null;
     if (!hasUniqueSolution(clueGrid, N, diff, entry, exit)) clueGrid[r][c] = saved;
@@ -861,7 +863,7 @@ function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
  * Throws on the rare failure to find a cycle.
  */
 function generatePuzzle(cells, diff) {
-  if (diff === undefined) diff = DIFF_HARD;
+  if (diff === undefined) diff = DIFF_VERY_HARD;
   const N = cells;
 
   for (let attempt = 0; ; attempt++) {
@@ -885,7 +887,7 @@ function generatePuzzle(cells, diff) {
     _removeRedundantClues(clueGrid, N, diff, entry, exit);
 
     // Phase 4 — Reject puzzles that are solvable at a lower difficulty.
-    if (diff > DIFF_EASY && hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
+    if (diff > DIFF_NORMAL && hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
 
     // Build GameState
     const clues = [];
