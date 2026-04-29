@@ -516,8 +516,10 @@ class GameState {
 
     const eIdx = ck(eCell.r, eCell.c);
     const xIdx = ck(xCell.r, xCell.c);
-    return (leaves[0] === eIdx && leaves[1] === xIdx) ||
-      (leaves[0] === xIdx && leaves[1] === eIdx);
+    if (!((leaves[0] === eIdx && leaves[1] === xIdx) ||
+          (leaves[0] === xIdx && leaves[1] === eIdx))) return false;
+    // All vertex clues must be satisfied (no grays remain, so this is exact).
+    return this._allCluesSatisfiedAssumeGrayIsBlack();
   }
 
   /**
