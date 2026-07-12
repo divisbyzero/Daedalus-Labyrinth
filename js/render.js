@@ -39,12 +39,6 @@ const PALETTE = {
   vertexDot: '#3A4E47',
   vertexSatisfiedRing: '#1C5240',
 
-  // Solved overlay
-  solvedOverlayBg: '#E4EAE4EE',
-  solvedOverlayBorder: '#BDC4BB',
-  solvedHeadingText: '#253330',
-  solvedTimeText: '#2C4038',
-
   // Solved-board hedgerows
   hedgeSide: '#17392B',      // shadowed side face of a standing hedge
   hedgeHighlight: '#5E9678', // sunlit crown along the top face
@@ -116,17 +110,12 @@ const THEME = {
   // Colors — plain vertices
   vertexPlain: PALETTE.vertexDot,
 
-  // Solved overlay
-  solvedOverlayBg: PALETTE.solvedOverlayBg,
-  solvedOverlayBorder: PALETTE.solvedOverlayBorder,
-  solvedHeadingText: PALETTE.solvedHeadingText,
-  solvedTimeText: PALETTE.solvedTimeText,
-
   // Solved-board hedgerows (the win "reveal" transformation)
   hedgeSide: PALETTE.hedgeSide,
   hedgeHighlight: PALETTE.hedgeHighlight,
   hedgeWidthScale: 0.16,   // final hedge width, as a fraction of cell size
   hedgeHeightScale: 0.18,  // extrusion height, as a fraction of cell size
+  hedgeSlant: 0.45,        // horizontal drift per unit of drop (light from upper left)
 };
 
 /**
@@ -194,7 +183,6 @@ class Renderer {
     const C = state.cells;
     const W = this._margin * 2 + C * this._cellSize;
     const showErrors = prefs.showErrors !== false;
-    const showTimer = prefs.showTimer !== false;
 
     // Solved-board reveal: 0 = normal play rendering, 1 = full labyrinth
     // (apparatus faded out, hedges drawn as standing hedgerows).
@@ -292,12 +280,6 @@ class Renderer {
       }
       ctx.restore();
     }
-
-    // 4. "Solved!" overlay — drawn last so it appears above everything
-    if (isSolved && !state.cheated) {
-      const timeStr = showTimer ? (state.solvedTime || null) : null;
-      this._drawSolvedOverlay(ctx, C, timeStr, state.solvedAt || null);
-    }
   }
 
   /**
@@ -312,73 +294,6 @@ class Renderer {
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
-
-  _drawSolvedOverlay(ctx, gridSize, timeStr, solvedAt) {
-    const cx = this._margin + gridSize * this._cellSize / 2;
-    const cy = this._margin + gridSize * this._cellSize / 2;
-
-    // Ease-out scale animation: 0.82 → 1.0 over 350ms
-    const ANIM_MS = 350;
-    const elapsed = solvedAt ? Math.min(1, (Date.now() - solvedAt) / ANIM_MS) : 1;
-    const eased = 1 - Math.pow(1 - elapsed, 3); // cubic ease-out
-    const scale = 0.82 + 0.18 * eased;
-    const alpha = 0.55 + 0.45 * eased;
-
-    const fontSize = Math.round(this._cellSize * 0.9);
-    const timeFontSize = Math.round(this._cellSize * 0.4);
-    const lineGap = Math.round(fontSize * 0.22);
-
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    const solvedW = ctx.measureText('Solved!').width;
-    ctx.font = `${timeFontSize}px sans-serif`;
-    const timeW = timeStr ? ctx.measureText(timeStr).width : 0;
-
-    const padX = fontSize * 0.6;
-    const padY = fontSize * 0.35;
-    const contentH = fontSize + (timeStr ? lineGap + timeFontSize : 0);
-    const bw = Math.max(solvedW, timeW) + padX * 2;
-    const bh = contentH + padY * 2;
-    const r = Math.min(bh / 2, 28);
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(scale, scale);
-    ctx.globalAlpha = alpha;
-
-    const bx = -bw / 2;
-    const by = -bh / 2;
-
-    // Pill background
-    ctx.beginPath();
-    ctx.moveTo(bx + r, by);
-    ctx.arcTo(bx + bw, by, bx + bw, by + bh, r);
-    ctx.arcTo(bx + bw, by + bh, bx, by + bh, r);
-    ctx.arcTo(bx, by + bh, bx, by, r);
-    ctx.arcTo(bx, by, bx + bw, by, r);
-    ctx.closePath();
-    ctx.fillStyle = THEME.solvedOverlayBg;
-    ctx.fill();
-    ctx.strokeStyle = THEME.solvedOverlayBorder;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.fillStyle = THEME.solvedHeadingText;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const solvedY = by + padY + fontSize / 2;
-    ctx.font = `bold ${fontSize}px sans-serif`;
-    ctx.fillText('Solved!', 0, solvedY);
-
-    if (timeStr) {
-      const timeY = solvedY + fontSize / 2 + lineGap + timeFontSize / 2;
-      ctx.font = `${timeFontSize}px sans-serif`;
-      ctx.fillStyle = THEME.solvedTimeText;
-      ctx.fillText(timeStr, 0, timeY);
-    }
-
-    ctx.restore();
-  }
 
   _cellFill(color) {
     switch (color) {
@@ -423,11 +338,14 @@ class Renderer {
   /**
    * Draw the hedge walls as standing hedgerows for the solved-board reveal.
    *
-   * Pseudo-3D extrusion for a slightly-tilted aerial view: the wall path is
-   * stroked repeatedly at decreasing downward offsets in a dark "side face"
-   * green, then once in place as the top face with a sunlit highlight along
-   * the crown.  Horizontal walls show their full southern face; vertical
-   * walls show a side face at their southern end.
+   * Pseudo-3D extrusion for a tilted aerial view with light from the upper
+   * left: the wall path is stroked repeatedly at decreasing down-right
+   * offsets in a dark "side face" green, then once in place as the top face
+   * with a sunlit highlight along the crown.
+   *
+   * Walls separating two enclosed cells are not extruded — they dissolve
+   * with the apparatus so each connected enclosed region reads as one solid
+   * stand of trees bounded by a single hedge.
    *
    * `t` ∈ (0..1] animates the transformation — width, height, shadow and
    * highlight all scale with it, so t→0 matches the flat in-game look.
@@ -436,45 +354,66 @@ class Renderer {
     const { ctx } = this;
     const C = state.cells;
 
+    // Map of enclosed (tree-stand) cells, used to find internal dividers.
+    const enclosed = Array.from({ length: C }, (_, r) =>
+      Array.from({ length: C }, (_, c) => state.getCellColor(r, c) === CELL.ENCLOSED));
+
     const walls = new Path2D();
+    const dividers = new Path2D(); // walls between two enclosed cells
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++)
         if (state.hEdges[r][c] === EDGE_BLACK) {
-          walls.moveTo(this.vx(c), this.vy(r));
-          walls.lineTo(this.vx(c + 1), this.vy(r));
+          const isDivider = r > 0 && r < C && enclosed[r - 1][c] && enclosed[r][c];
+          const p = isDivider ? dividers : walls;
+          p.moveTo(this.vx(c), this.vy(r));
+          p.lineTo(this.vx(c + 1), this.vy(r));
         }
     for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++)
         if (state.vEdges[r][c] === EDGE_BLACK) {
-          walls.moveTo(this.vx(c), this.vy(r));
-          walls.lineTo(this.vx(c), this.vy(r + 1));
+          const isDivider = c > 0 && c < C && enclosed[r][c - 1] && enclosed[r][c];
+          const p = isDivider ? dividers : walls;
+          p.moveTo(this.vx(c), this.vy(r));
+          p.lineTo(this.vx(c), this.vy(r + 1));
         }
 
     const targetW = this._cellSize * THEME.hedgeWidthScale;
     const w = THEME.edgeWidthBlack + (targetW - THEME.edgeWidthBlack) * t;
     const h = this._cellSize * THEME.hedgeHeightScale * t;
+    const slant = THEME.hedgeSlant;
 
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = w;
 
+    // Internal dividers fade out with the rest of the apparatus.
+    if (t < 1) {
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = THEME.edgeBlack;
+      ctx.lineWidth = THEME.edgeWidthBlack;
+      ctx.stroke(dividers);
+      ctx.restore();
+    }
+
     // Deepest side stroke carries a soft ground shadow to seat the hedges.
     ctx.save();
-    ctx.translate(0, h);
+    ctx.translate(h * slant, h);
     ctx.shadowColor = `rgba(15, 26, 20, ${0.35 * t})`;
     ctx.shadowBlur = 7;
+    ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
     ctx.strokeStyle = THEME.hedgeSide;
     ctx.stroke(walls);
     ctx.restore();
 
-    // Side faces — the same path at decreasing vertical offsets.
+    // Side faces — the same path at decreasing down-right offsets.
     ctx.strokeStyle = THEME.hedgeSide;
     const step = Math.max(1, h / 6);
-    for (let dy = h - step; dy > 0; dy -= step) {
+    for (let d = h - step; d > 0; d -= step) {
       ctx.save();
-      ctx.translate(0, dy);
+      ctx.translate(d * slant, d);
       ctx.stroke(walls);
       ctx.restore();
     }

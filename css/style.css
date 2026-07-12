@@ -304,6 +304,25 @@ canvas {
   padding: 0 4px;
 }
 
+/* On a win the timer slot becomes the celebration banner */
+.timer-display--solved {
+  color: var(--color-path);
+  font-size: 1.35rem;
+  animation: solved-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes solved-pop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Status pill — shown below the board */
 #statusMsg {
   font-size: 0.9rem;

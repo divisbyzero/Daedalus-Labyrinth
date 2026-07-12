@@ -169,7 +169,11 @@ prefShowTimer.addEventListener('change', () => {
   savePrefs();
   if (!prefs.showTimer) {
     toolbarCenter.hidden = true;
-  } else if (!timerDone && timerStart !== null) {
+  } else if (timerStart !== null) {
+    // Running timer or, after a win, the "Solved!" banner.
+    if (timerDone && state && state.solvedTime) {
+      timerDisplay.textContent = `Solved! · ${state.solvedTime}`;
+    }
     toolbarCenter.hidden = false;
   }
   if (state) redraw();
@@ -324,15 +328,19 @@ function markTimerSolved() {
   timerDone = true;
   stopTimer();
   const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-  timerDisplay.textContent = formatTime(elapsed);
   state.solvedTime = formatTime(elapsed);
-  state.solvedAt = Date.now(); // used by renderer for intro animation
-  toolbarCenter.hidden = true;
+  state.solvedAt = Date.now(); // drives the labyrinth reveal animation
+  // The timer slot becomes the celebration banner (it covers nothing there).
+  timerDisplay.textContent = prefs.showTimer
+    ? `Solved! · ${state.solvedTime}`
+    : 'Solved!';
+  timerDisplay.classList.add('timer-display--solved');
+  toolbarCenter.hidden = false;
   animateSolvedIntro();
 }
 
-// Keep redrawing until both the pill scale-in and the labyrinth reveal
-// (SOLVED_REVEAL_MS, defined in render.js) have finished.
+// Keep redrawing until the labyrinth reveal (SOLVED_REVEAL_MS, defined in
+// render.js) has finished.
 function animateSolvedIntro() {
   const start = Date.now();
   function frame() {
