@@ -432,13 +432,16 @@ class Renderer {
       ctx.restore();
     }
 
-    // Top faces: blocks first, then walls flow over the region boundaries.
+    // Top faces: wall tops first, then the block fill flows over the inner
+    // half of its boundary walls — the crown tone runs unbroken from block
+    // interior into the walls' highlight band, leaving a dark edge only on
+    // the outer (path-facing) side where the top drops off.
+    ctx.strokeStyle = THEME.edgeBlack;
+    ctx.stroke(walls);
     if (hasBlocks) {
       ctx.fillStyle = blockTop;
       ctx.fill(blocks);
     }
-    ctx.strokeStyle = THEME.edgeBlack;
-    ctx.stroke(walls);
 
     // Old dividers linger on the rising block tops and dissolve.
     if (t < 1) {
