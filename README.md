@@ -6,14 +6,14 @@ A browser-based logic puzzle. You play as Daedalus, shaping a labyrinth one hedg
 
 ## How to play
 
-Build a labyrinth by placing hedges along the grid lines. The finished maze must form a single continuous path connecting the two exits — no loops, no dead ends.
+Build a labyrinth by placing hedges along the grid lines. The finished maze must form a single continuous path connecting the two exits — no loops, no dead ends. The two gaps in the outer border are the entrance and exit.
 
-- **Left-click** a grid line to place or remove a hedge
-- **Right-click** to remove or restore an undecided line
-- The number on a dot tells you how many hedges must meet at that corner
-- No square region may have exactly three hedges around it
+- **Left-click** a grid line to cycle it: undecided → hedge → removed
+- **Right-click** to cycle in reverse (a long press removes a line directly)
+- The number on a dot tells you exactly how many hedges meet at that corner
+- Every square is either on the path (two openings) or walled off on all four sides
 
-Use Undo, Redo, and Reset freely. Show Solution is available if you get stuck.
+You don't need to mark every hedge — carving the complete path is enough. Use Undo, Redo, and Reset freely. Show Solution is available if you get stuck.
 
 ## Puzzle options
 

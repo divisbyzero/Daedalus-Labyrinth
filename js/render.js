@@ -257,13 +257,9 @@ class Renderer {
     }
 
     // 2. Edges — flat lines during play; standing hedgerows once solved.
+    // (During the reveal, undecided GRAY edges are implicit hedges and are
+    // drawn by _drawHedgerows rather than as thin guides.)
     if (reveal > 0) {
-      if (reveal < 1) {
-        ctx.save();
-        ctx.globalAlpha = 1 - reveal;
-        this._drawAllEdges(state, EDGE_GRAY);
-        ctx.restore();
-      }
       this._drawHedgerows(state, reveal);
     } else {
       this._drawAllEdges(state, EDGE_GRAY);
@@ -360,15 +356,18 @@ class Renderer {
     const { ctx } = this;
     const C = state.cells;
 
-    // Map of enclosed (topiary) cells.
+    // The board is solved, so undecided GRAY edges are implicit hedges.
+    const isHedge = (e) => e !== EDGE_NONE;
+
+    // Map of enclosed (topiary) cells: any cell with no doorway.
     const enclosed = Array.from({ length: C }, (_, r) =>
-      Array.from({ length: C }, (_, c) => state.getCellColor(r, c) === CELL.ENCLOSED));
+      Array.from({ length: C }, (_, c) => state.getCellEdges(r, c).every(isHedge)));
 
     const walls = new Path2D();
     const dividers = new Path2D(); // walls between two enclosed cells
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++)
-        if (state.hEdges[r][c] === EDGE_BLACK) {
+        if (isHedge(state.hEdges[r][c])) {
           const isDivider = r > 0 && r < C && enclosed[r - 1][c] && enclosed[r][c];
           const p = isDivider ? dividers : walls;
           p.moveTo(this.vx(c), this.vy(r));
@@ -376,7 +375,7 @@ class Renderer {
         }
     for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++)
-        if (state.vEdges[r][c] === EDGE_BLACK) {
+        if (isHedge(state.vEdges[r][c])) {
           const isDivider = c > 0 && c < C && enclosed[r][c - 1] && enclosed[r][c];
           const p = isDivider ? dividers : walls;
           p.moveTo(this.vx(c), this.vy(r));
@@ -397,10 +396,10 @@ class Renderer {
     const w = THEME.edgeWidthBlack + (targetW - THEME.edgeWidthBlack) * t;
     const h = this._cellSize * THEME.hedgeHeightScale * t;
     const slant = THEME.hedgeSlant;
-    // Block tops blend from the in-play sage into the sunlit-crown tone of
-    // the walls as they rise (crown = base green + highlight at 0.35 alpha).
+    // Block tops match the sunlit-crown tone of the walls (crown = base
+    // green + highlight at 0.35 alpha).  Drawn at alpha t, they fade in
+    // over the underlying cell fill as they rise.
     const crown = _hexLerp(THEME.edgeBlack, THEME.hedgeHighlight, 0.35);
-    const blockTop = _hexLerp(THEME.cellEnclosed, crown, t);
 
     ctx.save();
     ctx.lineCap = 'round';
@@ -439,8 +438,11 @@ class Renderer {
     ctx.strokeStyle = THEME.edgeBlack;
     ctx.stroke(walls);
     if (hasBlocks) {
-      ctx.fillStyle = blockTop;
+      ctx.save();
+      ctx.globalAlpha = t;
+      ctx.fillStyle = crown;
       ctx.fill(blocks);
+      ctx.restore();
     }
 
     // Old dividers linger on the rising block tops and dissolve.

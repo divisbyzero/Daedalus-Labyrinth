@@ -124,7 +124,8 @@
       <h2 id="helpTitle" class="modal-title">How to Play</h2>
       <div class="help-body">
         <p class="help-subheading">Goal</p>
-        <p>Build a labyrinth that connects the exits with a single winding path.</p>
+        <p>Build a labyrinth that connects the exits with a single winding path. The two gaps in the outer border are
+          the entrance and exit.</p>
 
         <p class="help-subheading">Placing hedges</p>
         <p>Each grid line between two dots has three states:</p>
@@ -133,20 +134,24 @@
           <li><span class="help-hedge hedge">Hedge</span> (thick line)</li>
           <li><span class="help-hedge removed">Removed</span> (no line)</li>
         </ul>
-        <p>Clicking a segment cycles: Undecided → Hedge → Removed → Undecided. A long press removes an edge.</p>
+        <p>Clicking a segment cycles: Undecided → Hedge → Removed → Undecided. Right-click cycles in reverse. A long
+          press removes a segment directly.</p>
 
-        <p class="help-subheading">The clues</p>
-        <p>The number on a dot tells how many hedges meet at that dot. Use these to deduce where hedges must go.</p>
+        <p class="help-subheading">The rules</p>
+        <p>The number on a dot tells exactly how many hedges meet at that dot.</p>
 
-        <p>A square with four hedges is allowed. It produces an enclosed area that the path goes around. (Imagine a
-          large tree in the middle of the labyrinth.)</p>
+        <p>Every square is either on the path — two openings and two hedges — or walled off on all four sides. A fully
+          hedged square is fine: it's a stand of trees the path winds around.</p>
 
-        <p>A red dot or a red square represents an error: too many hedges meeting at a dot or a square bounded by one or
-          three hedges.</p>
+        <p>The colors track your progress: stone squares lie on the walking path, and dark green squares are walled
+          off. A red dot or a red square marks an error — too many hedges meeting at a dot, or a square bounded by
+          exactly one or three hedges.</p>
 
         <p class="help-subheading">Winning</p>
-        <p>The puzzle is solved when the hedge walls form a single continuous walking path connecting the exits, with no
-          loops or dead ends.</p>
+        <p>The puzzle is solved the moment your removed segments carve one continuous path from entrance to exit — no
+          loops, no dead ends, every clue satisfied. Undecided segments count as hedges, so you don't need to mark
+          every wall.</p>
+        <p class="help-subtle-text">Solve it, and watch your labyrinth rise.</p>
 
         <p class="help-subheading">Why Daedalus' Labyrinth?</p>
         <p class="help-subtle-text">Daedalus was the legendary builder of the Labyrinth of Crete. Here, you're not
