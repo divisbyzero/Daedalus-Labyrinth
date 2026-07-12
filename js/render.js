@@ -65,7 +65,7 @@ const THEME = {
   // Layout
   cellSize: 60,       // logical pixels per cell
   margin: 42,         // padding around the grid
-  hitTolerance: 14,   // edge click detection radius (px)
+  hitTolerance: 14,   // minimum edge click detection radius (px)
 
   // Vertex sizes
   vertexRadiusNumbered: 11, // radius of numbered (clue) vertices
@@ -160,8 +160,12 @@ class Renderer {
         ? Math.floor((availableWidth - cells * this._cellSize) / 2)
         : THEME.margin;
     }
-    // Slightly larger hit zone for finger taps on phones.
-    this._hitTolerance = Math.min(screen.width, screen.height) <= 480 ? 18 : THEME.hitTolerance;
+    // Edge hit tolerance scales with the rendered cell size so a click that
+    // lands a little off an edge still registers.  The cap keeps a small
+    // dead zone at each cell's center, where a click would be ambiguous
+    // between all four edges.  Phones get a larger floor for finger taps.
+    const minTolerance = isPhone ? 18 : THEME.hitTolerance;
+    this._hitTolerance = Math.max(minTolerance, Math.min(this._cellSize * 0.34, 24));
     const total = this._margin * 2 + cells * this._cellSize;
     const dpr = this.dpr;
     this.canvas.width = total * dpr;
