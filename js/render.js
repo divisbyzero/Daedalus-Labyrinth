@@ -45,14 +45,12 @@ const PALETTE = {
   solvedHeadingText: '#253330',
   solvedTimeText: '#2C4038',
 
-  // Misc
-  exitAccent: '#5A8CAA',
 };
 
 const THEME = {
   // Layout
   cellSize: 60,       // logical pixels per cell
-  margin: 42,         // padding around the grid (must be ≥ cellSize/2 × portalRadiusScale)
+  margin: 42,         // padding around the grid
   hitTolerance: 14,   // edge click detection radius (px)
 
   // Vertex sizes
@@ -103,16 +101,6 @@ const THEME = {
   solvedOverlayBorder: PALETTE.solvedOverlayBorder,
   solvedHeadingText: PALETTE.solvedHeadingText,
   solvedTimeText: PALETTE.solvedTimeText,
-
-  // Entry/exit archway
-  portalColor: PALETTE.regionCompleted,
-  portalRadiusScale: 1.25,
-
-  // Entry/exit markers
-  exitMarker: PALETTE.exitAccent,
-  exitLineWidth: 2,
-  exitTriangleSize: 14,
-  exitTriangleGap: 10,
 };
 
 /**
@@ -327,135 +315,6 @@ class Renderer {
     }
 
     ctx.restore();
-  }
-
-  /**
-   * Draw the marker at an entry/exit gap:
-   * a thin line spanning the gap, dots at both framing vertices,
-   * and a small equilateral triangle pointing outward from the board edge.
-   */
-  _drawExitMarker(ctx, state, edge) {
-    if (!edge) return;
-    const { isH, r, c } = edge;
-    const C = state.cells;
-
-    let x1, y1, x2, y2;
-    if (isH) {
-      x1 = this.vx(c); y1 = this.vy(r);
-      x2 = this.vx(c + 1); y2 = this.vy(r);
-    } else {
-      x1 = this.vx(c); y1 = this.vy(r);
-      x2 = this.vx(c); y2 = this.vy(r + 1);
-    }
-
-    // Thin line across the gap
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.strokeStyle = THEME.exitMarker;
-    ctx.lineWidth = THEME.exitLineWidth;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-
-    // Dots at the two framing vertices
-    const R = THEME.vertexRadiusPlain;
-    ctx.fillStyle = THEME.exitMarker;
-    for (const [x, y] of [[x1, y1], [x2, y2]]) {
-      ctx.beginPath();
-      ctx.arc(x, y, R, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Small equilateral triangle pointing outward from the board edge.
-    // Base is centered on the gap midpoint, parallel to the gap;
-    // apex points away from the board interior.
-    const s = THEME.exitTriangleSize;
-    const h = s * Math.sqrt(3) / 2;
-    const g = THEME.exitTriangleGap;
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2;
-
-    let tx1, ty1, tx2, ty2, tx3, ty3;
-    if (isH) {
-      if (r === 0) {
-        // Top border — apex points up, base offset upward by gap
-        tx1 = mx - s / 2; ty1 = my - g;
-        tx2 = mx + s / 2; ty2 = my - g;
-        tx3 = mx; ty3 = my - g - h;
-      } else {
-        // Bottom border — apex points down, base offset downward by gap
-        tx1 = mx - s / 2; ty1 = my + g;
-        tx2 = mx + s / 2; ty2 = my + g;
-        tx3 = mx; ty3 = my + g + h;
-      }
-    } else {
-      if (c === 0) {
-        // Left border — apex points left, base offset leftward by gap
-        tx1 = mx - g; ty1 = my - s / 2;
-        tx2 = mx - g; ty2 = my + s / 2;
-        tx3 = mx - g - h; ty3 = my;
-      } else {
-        // Right border — apex points right, base offset rightward by gap
-        tx1 = mx + g; ty1 = my - s / 2;
-        tx2 = mx + g; ty2 = my + s / 2;
-        tx3 = mx + g + h; ty3 = my;
-      }
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(tx1, ty1);
-    ctx.lineTo(tx2, ty2);
-    ctx.lineTo(tx3, ty3);
-    ctx.closePath();
-    ctx.fillStyle = THEME.exitMarker;
-    ctx.fill();
-  }
-
-  /**
-   * Draw a filled semicircle (archway) extending outward from an entry/exit
-   * gap. The flat edge of the semicircle is flush with the border wall; the
-   * dome extends away from the board interior.
-   */
-  _drawPortalSpill(ctx, state, edge) {
-    if (!edge) return;
-    const C = state.cells;
-    const { isH, r, c } = edge;
-    const rad = (this._cellSize / 2) * THEME.portalRadiusScale;
-
-    let cx, cy, startAngle, endAngle, anticlockwise;
-
-    if (isH) {
-      // Center x is always the midpoint of the door opening, not a function of rad.
-      cx = this.vx(c) + this._cellSize / 2;
-      if (r === 0) {
-        // Top border — dome extends upward
-        cy = this.vy(0);
-        startAngle = 0; endAngle = Math.PI; anticlockwise = true;
-      } else {
-        // Bottom border — dome extends downward
-        cy = this.vy(C);
-        startAngle = 0; endAngle = Math.PI; anticlockwise = false;
-      }
-    } else {
-      // Center y is always the midpoint of the door opening, not a function of rad.
-      cy = this.vy(r) + this._cellSize / 2;
-      if (c === 0) {
-        // Left border — dome extends leftward
-        cx = this.vx(0);
-        startAngle = Math.PI / 2; endAngle = -Math.PI / 2; anticlockwise = false;
-      } else {
-        // Right border — dome extends rightward
-        cx = this.vx(C);
-        startAngle = -Math.PI / 2; endAngle = Math.PI / 2; anticlockwise = false;
-      }
-    }
-
-    // Fill the closed semicircle (arc + diameter)
-    ctx.beginPath();
-    ctx.arc(cx, cy, rad, startAngle, endAngle, anticlockwise);
-    ctx.closePath();
-    ctx.fillStyle = THEME.portalColor;
-    ctx.fill();
   }
 
   _cellFill(color) {

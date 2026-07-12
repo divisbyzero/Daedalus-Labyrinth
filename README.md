@@ -17,13 +17,13 @@ Use Undo, Redo, and Reset freely. Show Solution is available if you get stuck.
 
 ## Puzzle options
 
-Choose a grid size (4×4 up to 15×15) and difficulty (Normal / Hard / Very Hard) before generating a new game.
+Choose a grid size (4×4 up to 15×15) and difficulty (Beginner / Normal / Hard / Very Hard) before generating a new game.
 
 ## Running locally
 
 No build step required. Clone the repo and open `index.html` in a browser.
 
-```
+```sh
 git clone https://github.com/divisbyzero/Daedalus-Labyrinth.git
 cd Daedalus-Labyrinth
 open index.html

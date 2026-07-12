@@ -827,7 +827,7 @@ function findOneSolution(clueGrid, N, entry, exit) {
  * Shuffles the clue list, then for each clue tentatively removes it and
  * tests for uniqueness; restores the clue if uniqueness is lost.
  */
-function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
+function _removeRedundantClues(clueGrid, N, diff, entry, exit, deadline) {
   const positions = [];
   for (let r = 1; r < N; r++)
     for (let c = 1; c < N; c++)
@@ -835,6 +835,9 @@ function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
   _shuffle(positions);
 
   for (const [r, c] of positions) {
+    // Out of time — stop early. Extra clues only make the puzzle easier;
+    // uniqueness is unaffected.
+    if (deadline !== undefined && Date.now() > deadline) break;
     if (clueGrid[r][c] === null) continue;
     // Beginner mode keeps ~half of removable clues to give players more guidance.
     if (diff === DIFF_BEGINNER && Math.random() < 0.5) continue;
@@ -861,9 +864,16 @@ function _removeRedundantClues(clueGrid, N, diff, entry, exit) {
  * Returns a configured GameState; all internal edges start as EDGE_GRAY
  * (undecided) — the player must deduce the solution.
  * Throws on the rare failure to find a cycle.
+ *
+ * Generation runs synchronously, so it observes a soft time budget
+ * (default 8s): once exceeded, clue removal stops early and the
+ * lower-difficulty rejection is skipped.  The result is always a valid,
+ * uniquely-solvable puzzle — it may just be easier than requested.
  */
-function generatePuzzle(cells, diff) {
+function generatePuzzle(cells, diff, timeBudgetMs) {
   if (diff === undefined) diff = DIFF_VERY_HARD;
+  if (timeBudgetMs === undefined) timeBudgetMs = 8000;
+  const deadline = Date.now() + timeBudgetMs;
   const N = cells;
 
   for (let attempt = 0; ; attempt++) {
@@ -884,10 +894,14 @@ function generatePuzzle(cells, diff) {
     if (!hasUniqueSolution(clueGrid, N, diff, entry, exit)) continue;
 
     // Phase 3 — Remove redundant clues
-    _removeRedundantClues(clueGrid, N, diff, entry, exit);
+    _removeRedundantClues(clueGrid, N, diff, entry, exit, deadline);
 
     // Phase 4 — Reject puzzles that are solvable at a lower difficulty.
-    if (diff > DIFF_NORMAL && hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
+    // Small boards often cannot produce a puzzle that *requires* the harder
+    // technique, so after enough rejections (or once over the time budget)
+    // accept the best puzzle we have rather than failing outright.
+    if (diff > DIFF_NORMAL && attempt < 40 && Date.now() < deadline &&
+      hasUniqueSolution(clueGrid, N, diff - 1, entry, exit)) continue;
 
     // Build GameState
     const clues = [];

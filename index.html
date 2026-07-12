@@ -16,7 +16,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="phoneicon.png?v=2">
   <link rel="apple-touch-icon" sizes="167x167" href="phoneicon.png?v=2">
   <link rel="apple-touch-icon" sizes="152x152" href="phoneicon.png?v=2">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
@@ -53,7 +53,7 @@
         </div>
       </div>
     </div>
-    <div id="statusMsg"></div>
+    <div id="statusMsg" role="status" aria-live="polite"></div>
   </main>
 
   <!-- Preferences modal -->
@@ -127,13 +127,13 @@
         <p>Build a labyrinth that connects the exits with a single winding path.</p>
 
         <p class="help-subheading">Placing hedges</p>
-        <p>Each grid line between two dots has three states:
+        <p>Each grid line between two dots has three states:</p>
         <ul>
           <li><span class="help-hedge undecided">Undecided</span> (thin line)</li>
           <li><span class="help-hedge hedge">Hedge</span> (thick line)</li>
           <li><span class="help-hedge removed">Removed</span> (no line)</li>
         </ul>
-        Clicking a segment cycles: Undecided → Hedge → Removed → Undecided. A long press removes an edge.</p>
+        <p>Clicking a segment cycles: Undecided → Hedge → Removed → Undecided. A long press removes an edge.</p>
 
         <p class="help-subheading">The clues</p>
         <p>The number on a dot tells how many hedges meet at that dot. Use these to deduce where hedges must go.</p>
@@ -156,10 +156,10 @@
   </div>
 
   <script src="js/constants.js?v=2"></script>
-  <script src="js/state.js?v=2"></script>
-  <script src="js/render.js?v=2"></script>
-  <script src="js/generator.js?v=2"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/state.js?v=3"></script>
+  <script src="js/render.js?v=3"></script>
+  <script src="js/generator.js?v=3"></script>
+  <script src="js/main.js?v=4"></script>
 </body>
 
 </html>

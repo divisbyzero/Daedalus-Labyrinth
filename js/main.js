@@ -189,7 +189,7 @@ if (IS_PHONE) {
     .filter(o => parseInt(o.value, 10) > 7)
     .forEach(o => o.remove());
   // Clamp any saved boardSize that exceeds the phone limit.
-  if (prefs.boardSize > 7) { prefs.boardSize = 6; savePrefs(); }
+  if (prefs.boardSize > 7) { prefs.boardSize = 7; savePrefs(); }
 }
 
 // ── App state ─────────────────────────────────────────────────────────────────
@@ -269,6 +269,15 @@ function formatTime(totalSeconds) {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+function updateTimerDisplay() {
+  timerDisplay.textContent = formatTime(Math.floor((Date.now() - timerStart) / 1000));
+}
+
+function startTimerInterval() {
+  updateTimerDisplay();
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+}
+
 function startTimer() {
   stopTimer();
   timerStart = Date.now();
@@ -279,13 +288,12 @@ function startTimer() {
   toolbarCenter.hidden = !prefs.showTimer;
   if (state) { state.solvedTime = null; state.solvedAt = null; }
   if (isGamePaused()) {
+    // Record the pause start so resumeTimer() excludes the paused span.
+    timerPausedAt = Date.now();
     updatePauseUI();
     return;
   }
-  timerInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-    timerDisplay.textContent = formatTime(elapsed);
-  }, 1000);
+  startTimerInterval();
 }
 
 function stopTimer() {
@@ -308,10 +316,7 @@ function resumeTimer() {
     timerStart += Date.now() - timerPausedAt;
     timerPausedAt = null;
   }
-  timerInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - timerStart) / 1000);
-    timerDisplay.textContent = formatTime(elapsed);
-  }, 1000);
+  startTimerInterval();
 }
 
 function markTimerSolved() {
@@ -338,12 +343,19 @@ function animateSolvedIntro() {
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
-function getSolutionCountUpTo2(s) {
-  const clueGrid = buildClueGridFromState(s);
-  if (s.openMode) {
-    return countSolutions(clueGrid, s.cells, 2, undefined, s.entry, s.exit);
-  }
-  return countSolutions(clueGrid, s.cells, 2);
+/**
+ * Run `fn` after the browser has painted the current frame.
+ * requestAnimationFrame alone runs *before* paint, so a long synchronous task
+ * inside it would block status messages from ever appearing.
+ */
+function afterPaint(fn) {
+  requestAnimationFrame(() => setTimeout(fn, 0));
+}
+
+function setStatus(msg, isError = false) {
+  statusMsg.textContent = msg;
+  statusMsg.style.color = isError ? '#C47058' : '';
+  statusMsg.style.background = isError ? 'rgba(196, 112, 88, 0.15)' : '';
 }
 
 function redraw() {
@@ -357,9 +369,7 @@ function redraw() {
 }
 
 function updateStatus() {
-  statusMsg.textContent = '';
-  statusMsg.style.color = '';
-  statusMsg.style.background = '';
+  setStatus('');
 }
 
 function updateButtons() {
@@ -450,6 +460,7 @@ function cancelPress() {
 
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
+  if (e.button !== 0 && e.button !== 2) return; // ignore middle/extra buttons
   if (isGamePaused()) return;
   if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
   startPress(e.clientX, e.clientY, e.button === 0 && !e.ctrlKey);
@@ -494,9 +505,10 @@ canvas.addEventListener('touchcancel', cancelPress);
 
 // ── Buttons ───────────────────────────────────────────────────────────────────
 
-btnUndo.addEventListener('click', () => { state.undo(); redraw(); });
-btnRedo.addEventListener('click', () => { state.redo(); redraw(); });
+btnUndo.addEventListener('click', () => { if (state) { state.undo(); redraw(); } });
+btnRedo.addEventListener('click', () => { if (state) { state.redo(); redraw(); } });
 btnReset.addEventListener('click', () => {
+  if (!state) return;
   // reset() preserves clues and re-opens entry/exit automatically.
   state.reset();
   startTimer();
@@ -504,22 +516,22 @@ btnReset.addEventListener('click', () => {
 });
 
 btnShowSolution.addEventListener('click', () => {
-  statusMsg.textContent = 'Solving…';
-  statusMsg.style.color = '';
-  statusMsg.style.background = '';
-  requestAnimationFrame(() => {
+  if (!state) return;
+  setStatus('Solving…');
+  afterPaint(() => {
     const clueGrid = buildClueGridFromState(state);
     const solved = state.openMode
       ? findOneSolution(clueGrid, state.cells, state.entry, state.exit)
       : findOneSolution(clueGrid, state.cells);
     if (!solved) {
-      statusMsg.textContent = 'No solution found for current clues.';
-      statusMsg.style.color = '#C47058';
-      statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
+      setStatus('No solution found for current clues.', true);
       return;
     }
     state.cheated = true;
+    // Freeze the timer for good — prevents pause/resume from restarting it.
     stopTimer();
+    timerDone = true;
+    toolbarCenter.hidden = true;
     applySolvedEdgesToState(state, solved);
     redraw();
   });
@@ -530,26 +542,17 @@ btnShowSolution.addEventListener('click', () => {
 function doGenerate() {
   const cells = prefs.boardSize;
   const diff = prefs.difficulty;
-  statusMsg.textContent = 'Generating…';
-  statusMsg.style.color = '';
-  statusMsg.style.background = '';
-  requestAnimationFrame(() => {
+  setStatus('Generating…');
+  afterPaint(() => {
     try {
       state = generatePuzzle(cells, diff);
-      const solCount = getSolutionCountUpTo2(state);
-      if (solCount !== 1) {
-        throw new Error('Generator produced a non-unique board. Please generate again.');
-      }
       renderer = renderer || new Renderer(canvas);
       renderer.resize(cells);
       redraw();
       startTimer();
-      statusMsg.textContent = '';
-      statusMsg.style.background = '';
+      setStatus('');
     } catch (err) {
-      statusMsg.textContent = err.message;
-      statusMsg.style.color = '#C47058';
-      statusMsg.style.background = 'rgba(196, 112, 88, 0.15)';
+      setStatus(err.message, true);
     }
   });
 }
@@ -562,10 +565,12 @@ document.addEventListener('keydown', (e) => {
   if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open — let handleHelpKey handle it
   if (!prefsBackdrop.hasAttribute('hidden')) return;
   if (isGamePaused() && e.key !== 'Escape') return;
-  if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+  if (!state) return;
+  const key = e.key.toLowerCase(); // Shift+Z reports 'Z' — normalize
+  if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) {
     e.preventDefault();
     state.undo(); redraw();
-  } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) {
+  } else if ((e.ctrlKey || e.metaKey) && (key === 'y' || (e.shiftKey && key === 'z'))) {
     e.preventDefault();
     state.redo(); redraw();
   } else if (e.key === 'Escape' && isGamePaused()) {
@@ -582,6 +587,17 @@ document.addEventListener('visibilitychange', () => {
 
 window.addEventListener('blur', () => {
   requestPause('visibility');
+});
+
+// Re-fit the board when the window is resized or the device rotates.
+let resizeDebounce = null;
+window.addEventListener('resize', () => {
+  if (!state || !renderer) return;
+  clearTimeout(resizeDebounce);
+  resizeDebounce = setTimeout(() => {
+    renderer.resize(state.cells);
+    redraw();
+  }, 150);
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────

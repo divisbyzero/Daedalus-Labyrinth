@@ -592,6 +592,33 @@ canvas {
   color: var(--color-hedge);
 }
 
+/* Inline line-style swatches in the "Placing hedges" list */
+.help-hedge {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.help-hedge::before {
+  content: '';
+  display: inline-block;
+  width: 28px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.help-hedge.undecided::before {
+  border-top: 1.5px solid var(--color-grid);
+}
+
+.help-hedge.hedge::before {
+  border-top: 6px solid var(--color-hedge);
+  border-radius: 3px;
+}
+
+.help-hedge.removed::before {
+  border-top: 1.5px dashed #C0BAB0;
+}
+
 .help-subheading {
   font-weight: bold;
   color: var(--color-help-subheading);

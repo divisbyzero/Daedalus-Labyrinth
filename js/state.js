@@ -268,53 +268,6 @@ class GameState {
   }
 
   /**
-   * Build an adjacency structure for all currently-black edges.
-   * Vertices are indexed as  r * V + c  where V = cells + 1.
-   */
-  _buildBlackGraph() {
-    const C = this.cells, V = C + 1, N = V * V;
-    const degree = new Int32Array(N);
-    const adj = Array.from({ length: N }, () => []);
-
-    for (let r = 0; r <= C; r++)
-      for (let c = 0; c < C; c++)
-        if (this.hEdges[r][c] === EDGE_BLACK) {
-          const a = r * V + c, b = r * V + c + 1;
-          adj[a].push(b); adj[b].push(a);
-          degree[a]++; degree[b]++;
-        }
-    for (let r = 0; r < C; r++)
-      for (let c = 0; c <= C; c++)
-        if (this.vEdges[r][c] === EDGE_BLACK) {
-          const a = r * V + c, b = (r + 1) * V + c;
-          adj[a].push(b); adj[b].push(a);
-          degree[a]++; degree[b]++;
-        }
-    return { adj, degree, V, N };
-  }
-
-  /** Partition non-isolated vertices into connected components. */
-  _findComponents(adj, degree, N) {
-    const visited = new Uint8Array(N);
-    const components = [];
-    for (let start = 0; start < N; start++) {
-      if (degree[start] === 0 || visited[start]) continue;
-      const verts = [];
-      const queue = [start];
-      visited[start] = 1;
-      while (queue.length) {
-        const v = queue.pop();
-        verts.push(v);
-        for (const u of adj[v])
-          if (!visited[u]) { visited[u] = 1; queue.push(u); }
-      }
-      const isCycle = verts.every(v => degree[v] === 2);
-      components.push({ verts, isCycle });
-    }
-    return components;
-  }
-
-  /**
    * Returns a Set of "r,c" keys for every cell that is part of a premature
    * loop in the labyrinth path, including cells enclosed inside such a loop.
    *
