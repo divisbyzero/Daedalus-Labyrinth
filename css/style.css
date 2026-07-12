@@ -493,6 +493,37 @@ canvas {
   margin-bottom: 20px;
 }
 
+/* ── New-game confirmation modal ─────────────────────────────────────────────── */
+
+.confirm-modal {
+  max-width: 400px;
+}
+
+.confirm-message {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--color-text-ink);
+  margin-bottom: 20px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: var(--color-hedge);
+  border-color: var(--color-hedge);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #3A8468;
+  border-color: #3A8468;
+  color: #fff;
+}
+
 /* ── Preferences modal ───────────────────────────────────────────────────────── */
 
 .prefs-modal {

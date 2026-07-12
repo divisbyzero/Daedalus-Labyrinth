@@ -421,12 +421,10 @@ class GameState {
    *   The player does NOT need to manually mark every wall edge; finding
    *   the correct loop path is sufficient.
    *
-   * Open mode: the doorway graph is a single simple path whose endpoints
-   *   are the cells adjacent to entry and exit (entry/exit cells have
-   *   degree 1 in the internal doorway graph; all other path cells have
-   *   degree 2), and every vertex clue is consistent — treating remaining
-   *   GRAY edges as BLACK (walls).  As in closed mode, carving the correct
-   *   path is sufficient; the player need not mark every hedge.
+   * Open mode: every edge decided (no gray), the doorway graph is a single
+   *   simple path whose endpoints are the cells adjacent to entry and exit
+   *   (entry/exit cells have degree 1 in the internal doorway graph; all
+   *   other path cells have degree 2), and every vertex clue is satisfied.
    */
   checkWin() {
     const { adj, degree, N, ck } = this._buildDoorwayGraph();
@@ -454,6 +452,9 @@ class GameState {
       return this._allCluesSatisfiedAssumeGrayIsBlack();
     }
 
+    // Open mode requires every edge decided.
+    if (this.hasGrayEdges()) return false;
+
     // Open: one component, exactly two cells have degree 1 (the endpoints),
     //       all others degree 2, and the endpoints are the entry/exit cells.
     if (comps.length !== 1) return false;
@@ -470,7 +471,7 @@ class GameState {
     const xIdx = ck(xCell.r, xCell.c);
     if (!((leaves[0] === eIdx && leaves[1] === xIdx) ||
           (leaves[0] === xIdx && leaves[1] === eIdx))) return false;
-    // All vertex clues must be satisfied, treating GRAY edges as BLACK.
+    // All vertex clues must be satisfied (no grays remain, so this is exact).
     return this._allCluesSatisfiedAssumeGrayIsBlack();
   }
 

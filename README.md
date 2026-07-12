@@ -13,7 +13,7 @@ Build a labyrinth by placing hedges along the grid lines. The finished maze must
 - The number on a dot tells you exactly how many hedges meet at that corner
 - Every square is either on the path (two openings) or walled off on all four sides
 
-You don't need to mark every hedge — carving the complete path is enough. Use Undo, Redo, and Reset freely. Show Solution is available if you get stuck.
+Every line must be decided — turned into a hedge or removed — before the puzzle is complete. Use Undo, Redo, and Reset freely. Show Solution is available if you get stuck.
 
 ## Puzzle options
 

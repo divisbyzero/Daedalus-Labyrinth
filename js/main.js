@@ -106,8 +106,13 @@ function syncPrefsUI() {
   prefShowTimer.checked = prefs.showTimer;
 }
 
+// Snapshot of the game-setup prefs taken when the modal opens, used to
+// detect changes that call for a new board.
+let prefsSnapshot = null;
+
 function openPrefsModal() {
   syncPrefsUI();
+  prefsSnapshot = { boardSize: prefs.boardSize, difficulty: prefs.difficulty };
   prefsBackdrop.removeAttribute('hidden');
   prefsBackdrop.classList.remove('closing');
   prefsClose.focus();
@@ -122,8 +127,73 @@ function closePrefsModal() {
     prefsBackdrop.setAttribute('hidden', '');
     prefsBackdrop.classList.remove('closing');
     clearPause('modal-prefs');
+    maybeApplyNewGameSettings();
   }, CLOSE_DURATION_MS);
 }
+
+/**
+ * Called when the preferences modal closes.  If board size or difficulty
+ * changed: start a new game immediately when nothing would be lost (fresh,
+ * solved, or revealed board); otherwise ask before discarding progress.
+ */
+function maybeApplyNewGameSettings() {
+  if (!prefsSnapshot) return;
+  const changed = prefs.boardSize !== prefsSnapshot.boardSize ||
+    prefs.difficulty !== prefsSnapshot.difficulty;
+  prefsSnapshot = null;
+  if (!changed) return;
+  const inProgress = state && state.canUndo && !state.cheated && !state.checkWin();
+  if (inProgress) openConfirmModal();
+  else doGenerate();
+}
+
+// ── New-game confirmation modal ──────────────────────────────────────────────
+
+const confirmBackdrop = document.getElementById('confirmBackdrop');
+const confirmMessage = document.getElementById('confirmMessage');
+const btnConfirmNew = document.getElementById('confirmNew');
+const btnConfirmKeep = document.getElementById('confirmKeep');
+
+function openConfirmModal() {
+  const size = `${prefs.boardSize}×${prefs.boardSize}`;
+  confirmMessage.textContent =
+    `Your current puzzle is still in progress. Start a new ${size} game now, ` +
+    'or keep playing and use the new settings for your next game.';
+  confirmBackdrop.removeAttribute('hidden');
+  confirmBackdrop.classList.remove('closing');
+  btnConfirmNew.focus();
+  document.addEventListener('keydown', handleConfirmKey);
+  requestPause('modal-confirm');
+}
+
+function closeConfirmModal(startNew) {
+  confirmBackdrop.classList.add('closing');
+  document.removeEventListener('keydown', handleConfirmKey);
+  setTimeout(() => {
+    confirmBackdrop.setAttribute('hidden', '');
+    confirmBackdrop.classList.remove('closing');
+    clearPause('modal-confirm');
+    if (startNew) doGenerate();
+  }, CLOSE_DURATION_MS);
+}
+
+function handleConfirmKey(e) {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    closeConfirmModal(false);
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    (document.activeElement === btnConfirmNew ? btnConfirmKeep : btnConfirmNew).focus();
+  }
+}
+
+btnConfirmNew.addEventListener('click', () => closeConfirmModal(true));
+btnConfirmKeep.addEventListener('click', () => closeConfirmModal(false));
+confirmBackdrop.addEventListener('click', (e) => {
+  if (e.target === confirmBackdrop) closeConfirmModal(false);
+});
 
 function handlePrefsKey(e) {
   if (e.key === 'Escape') {
@@ -474,11 +544,16 @@ function cancelPress() {
 
 // ── Mouse ─────────────────────────────────────────────────────────────────────
 
+function anyModalOpen() {
+  return !helpBackdrop.hasAttribute('hidden') ||
+    !prefsBackdrop.hasAttribute('hidden') ||
+    !confirmBackdrop.hasAttribute('hidden');
+}
+
 canvas.addEventListener('mousedown', (e) => {
   e.preventDefault();
   if (e.button !== 0 && e.button !== 2) return; // ignore middle/extra buttons
-  if (isGamePaused()) return;
-  if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
+  if (isGamePaused() || anyModalOpen()) return;
   startPress(e.clientX, e.clientY, e.button === 0 && !e.ctrlKey);
 });
 
@@ -496,8 +571,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
-  if (isGamePaused()) return;
-  if (!helpBackdrop.hasAttribute('hidden') || !prefsBackdrop.hasAttribute('hidden')) return;
+  if (isGamePaused() || anyModalOpen()) return;
   const t = e.changedTouches[0];
   startPress(t.clientX, t.clientY, true, true); // true = touch event
 }, { passive: false });
@@ -581,8 +655,10 @@ btnGenerate.addEventListener('click', doGenerate);
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
-  if (!helpBackdrop.hasAttribute('hidden')) return; // modal is open — let handleHelpKey handle it
+  // A modal is open — its own key handler owns the keyboard.
+  if (!helpBackdrop.hasAttribute('hidden')) return;
   if (!prefsBackdrop.hasAttribute('hidden')) return;
+  if (!confirmBackdrop.hasAttribute('hidden')) return;
   if (isGamePaused() && e.key !== 'Escape') return;
   if (!state) return;
   const key = e.key.toLowerCase(); // Shift+Z reports 'Z' — normalize

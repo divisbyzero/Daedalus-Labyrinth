@@ -83,7 +83,7 @@
         <div class="pref-row">
           <div class="pref-label-group">
             <span class="pref-label">Difficulty</span>
-            <span class="pref-desc">Applied to the next generated puzzle</span>
+            <span class="pref-desc">How deep the deductions go</span>
           </div>
           <select id="prefDiff">
             <option value="0">Beginner</option>
@@ -117,6 +117,19 @@
     </div>
   </div>
 
+  <!-- New-game confirmation modal — shown when changed settings would discard a game in progress -->
+  <div id="confirmBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="confirmTitle"
+    hidden>
+    <div class="modal-box confirm-modal">
+      <h2 id="confirmTitle" class="modal-title">Start a new game?</h2>
+      <p id="confirmMessage" class="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirmKeep">Keep Playing</button>
+        <button id="confirmNew" class="btn-primary">Start New Game</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Help / instructions modal -->
   <div id="helpBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
     <div class="modal-box">
@@ -140,17 +153,17 @@
         <p class="help-subheading">The rules</p>
         <p>The number on a dot tells exactly how many hedges meet at that dot.</p>
 
-        <p>Every square is either on the path — two openings and two hedges — or walled off on all four sides. A fully
+        <p>Every square is either on the path—two openings and two hedges—or walled off on all four sides. A fully
           hedged square is fine: it's a stand of trees the path winds around.</p>
 
         <p>The colors track your progress: stone squares lie on the walking path, and dark green squares are walled
-          off. A red dot or a red square marks an error — too many hedges meeting at a dot, or a square bounded by
+          off. A red dot or a red square marks an error—too many hedges meeting at a dot, or a square bounded by
           exactly one or three hedges.</p>
 
         <p class="help-subheading">Winning</p>
-        <p>The puzzle is solved the moment your removed segments carve one continuous path from entrance to exit — no
-          loops, no dead ends, every clue satisfied. Undecided segments count as hedges, so you don't need to mark
-          every wall.</p>
+        <p>The puzzle is solved when your hedges and removed segments carve one continuous path from entrance to
+          exit—no loops, no dead ends, every clue satisfied. Every line must be decided: no thin undecided lines may
+          remain.</p>
         <p class="help-subtle-text">Solve it, and watch your labyrinth rise.</p>
 
         <p class="help-subheading">Why Daedalus' Labyrinth?</p>
