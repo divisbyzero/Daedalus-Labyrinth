@@ -397,8 +397,10 @@ class Renderer {
     const w = THEME.edgeWidthBlack + (targetW - THEME.edgeWidthBlack) * t;
     const h = this._cellSize * THEME.hedgeHeightScale * t;
     const slant = THEME.hedgeSlant;
-    // Block tops blend from the in-play sage into hedge green as they rise.
-    const blockTop = _hexLerp(THEME.cellEnclosed, THEME.edgeBlack, t);
+    // Block tops blend from the in-play sage into the sunlit-crown tone of
+    // the walls as they rise (crown = base green + highlight at 0.35 alpha).
+    const crown = _hexLerp(THEME.edgeBlack, THEME.hedgeHighlight, 0.35);
+    const blockTop = _hexLerp(THEME.cellEnclosed, crown, t);
 
     ctx.save();
     ctx.lineCap = 'round';
