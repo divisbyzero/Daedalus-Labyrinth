@@ -331,12 +331,13 @@ function markTimerSolved() {
   animateSolvedIntro();
 }
 
-const SOLVED_ANIM_MS = 350; // total duration of scale-in animation
+// Keep redrawing until both the pill scale-in and the labyrinth reveal
+// (SOLVED_REVEAL_MS, defined in render.js) have finished.
 function animateSolvedIntro() {
   const start = Date.now();
   function frame() {
     redraw();
-    if (Date.now() - start < SOLVED_ANIM_MS) requestAnimationFrame(frame);
+    if (Date.now() - start < SOLVED_REVEAL_MS) requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 }
@@ -344,12 +345,17 @@ function animateSolvedIntro() {
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 /**
- * Run `fn` after the browser has painted the current frame.
- * requestAnimationFrame alone runs *before* paint, so a long synchronous task
- * inside it would block status messages from ever appearing.
+ * Run `fn` once, after the browser has painted the current frame — so a
+ * status message set just before a long synchronous task actually appears.
+ * requestAnimationFrame alone runs *before* paint (hence the nested timeout),
+ * and rAF may never fire at all in a throttled/hidden tab (hence the
+ * plain-timeout fallback racing it).
  */
 function afterPaint(fn) {
-  requestAnimationFrame(() => setTimeout(fn, 0));
+  let done = false;
+  const run = () => { if (!done) { done = true; fn(); } };
+  requestAnimationFrame(() => setTimeout(run, 0));
+  setTimeout(run, 250);
 }
 
 function setStatus(msg, isError = false) {
@@ -359,13 +365,15 @@ function setStatus(msg, isError = false) {
 }
 
 function redraw() {
+  // Mark the win before rendering so the reveal animation starts from its
+  // first frame (render reads state.solvedAt for the transformation).
+  if (state.checkWin() && !state.cheated) {
+    markTimerSolved();
+  }
   renderer.render(state, pressEdge, prefs);
   updatePauseUI();
   updateButtons();
   updateStatus();
-  if (state.checkWin() && !state.cheated) {
-    markTimerSolved();
-  }
 }
 
 function updateStatus() {
@@ -533,7 +541,10 @@ btnShowSolution.addEventListener('click', () => {
     timerDone = true;
     toolbarCenter.hidden = true;
     applySolvedEdgesToState(state, solved);
-    redraw();
+    // The revealed solution gets the same labyrinth transformation as a win.
+    state.solvedAt = Date.now();
+    redraw(); // paint the first frame even if rAF is throttled (hidden tab)
+    animateSolvedIntro();
   });
 });
 

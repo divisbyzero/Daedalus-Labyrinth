@@ -45,7 +45,27 @@ const PALETTE = {
   solvedHeadingText: '#253330',
   solvedTimeText: '#2C4038',
 
+  // Solved-board hedgerows
+  hedgeSide: '#17392B',      // shadowed side face of a standing hedge
+  hedgeHighlight: '#5E9678', // sunlit crown along the top face
 };
+
+// Duration of the solved-board "reveal" transformation (also read by main.js
+// to keep redrawing until the animation completes).
+const SOLVED_REVEAL_MS = 1100;
+
+/** Linear interpolation between two '#RRGGBB' colors. */
+function _hexLerp(a, b, t) {
+  const pa = parseInt(a.slice(1), 16);
+  const pb = parseInt(b.slice(1), 16);
+  let out = '#';
+  for (const shift of [16, 8, 0]) {
+    const va = (pa >> shift) & 255;
+    const vb = (pb >> shift) & 255;
+    out += Math.round(va + (vb - va) * t).toString(16).padStart(2, '0');
+  }
+  return out;
+}
 
 const THEME = {
   // Layout
@@ -101,6 +121,12 @@ const THEME = {
   solvedOverlayBorder: PALETTE.solvedOverlayBorder,
   solvedHeadingText: PALETTE.solvedHeadingText,
   solvedTimeText: PALETTE.solvedTimeText,
+
+  // Solved-board hedgerows (the win "reveal" transformation)
+  hedgeSide: PALETTE.hedgeSide,
+  hedgeHighlight: PALETTE.hedgeHighlight,
+  hedgeWidthScale: 0.16,   // final hedge width, as a fraction of cell size
+  hedgeHeightScale: 0.18,  // extrusion height, as a fraction of cell size
 };
 
 /**
@@ -170,14 +196,19 @@ class Renderer {
     const showErrors = prefs.showErrors !== false;
     const showTimer = prefs.showTimer !== false;
 
+    // Solved-board reveal: 0 = normal play rendering, 1 = full labyrinth
+    // (apparatus faded out, hedges drawn as standing hedgerows).
+    const isSolved = state.checkWin();
+    const reveal = isSolved ? this._revealProgress(state.solvedAt) : 0;
+
     // Background
     ctx.fillStyle = THEME.background;
     ctx.fillRect(0, 0, W, W);
 
     // 1. Cell fills — cells with three black edges or a premature loop get a
     //    semi-transparent error overlay plus a border stroke.
-    const errorCells = showErrors ? state.getErrorCellSet() : new Set();
-    if (showErrors) {
+    const errorCells = showErrors && !isSolved ? state.getErrorCellSet() : new Set();
+    if (showErrors && !isSolved) {
       for (let r = 0; r < C; r++) {
         for (let c = 0; c < C; c++) {
           const cellColor = state.getCellColor(r, c);
@@ -187,9 +218,15 @@ class Renderer {
         }
       }
     }
+    // During the reveal, undecided cells melt into the enclosed-greenery tone
+    // so everything that isn't path reads as hedge mass.
+    const undeterminedFill = reveal > 0
+      ? _hexLerp(THEME.cellUndetermined, THEME.cellEnclosed, reveal)
+      : THEME.cellUndetermined;
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        ctx.fillStyle = this._cellFill(state.getCellColor(r, c));
+        const base = this._cellFill(state.getCellColor(r, c));
+        ctx.fillStyle = base === THEME.cellUndetermined ? undeterminedFill : base;
         ctx.fillRect(this.vx(c), this.vy(r), this._cellSize, this._cellSize);
         if (errorCells.has(`${r},${c}`)) {
           ctx.fillStyle = THEME.cellError;
@@ -227,25 +264,51 @@ class Renderer {
       ctx.stroke();
     }
 
-    // 2. Edges
-    this._drawAllEdges(state, EDGE_GRAY);
-    this._drawAllEdges(state, EDGE_BLACK);
+    // 2. Edges — flat lines during play; standing hedgerows once solved.
+    if (reveal > 0) {
+      if (reveal < 1) {
+        ctx.save();
+        ctx.globalAlpha = 1 - reveal;
+        this._drawAllEdges(state, EDGE_GRAY);
+        ctx.restore();
+      }
+      this._drawHedgerows(state, reveal);
+    } else {
+      this._drawAllEdges(state, EDGE_GRAY);
+      this._drawAllEdges(state, EDGE_BLACK);
+    }
 
     // 2a. Long-press pending indicator — drawn above edges, below vertices
     if (highlightEdge) this._drawEdgeHighlight(highlightEdge);
 
-    // 3. Vertices (on top of everything)
-    for (let r = 0; r <= C; r++) {
-      for (let c = 0; c <= C; c++) {
-        this._drawVertex(ctx, state, r, c, showErrors);
+    // 3. Vertices (on top of everything) — fade out during the reveal.
+    if (reveal < 1) {
+      ctx.save();
+      if (reveal > 0) ctx.globalAlpha = 1 - reveal;
+      for (let r = 0; r <= C; r++) {
+        for (let c = 0; c <= C; c++) {
+          this._drawVertex(ctx, state, r, c, showErrors);
+        }
       }
+      ctx.restore();
     }
 
     // 4. "Solved!" overlay — drawn last so it appears above everything
-    if (state.checkWin() && !state.cheated) {
+    if (isSolved && !state.cheated) {
       const timeStr = showTimer ? (state.solvedTime || null) : null;
       this._drawSolvedOverlay(ctx, C, timeStr, state.solvedAt || null);
     }
+  }
+
+  /**
+   * Progress of the solved-board transformation, eased 0→1.
+   * With no timestamp (e.g. a board that loads already solved) the
+   * transformation is shown complete rather than never starting.
+   */
+  _revealProgress(solvedAt) {
+    if (!solvedAt) return 1;
+    const t = Math.min(1, (Date.now() - solvedAt) / SOLVED_REVEAL_MS);
+    return 1 - Math.pow(1 - t, 3); // cubic ease-out
   }
 
   // ── Drawing helpers ───────────────────────────────────────────────────────
@@ -355,6 +418,76 @@ class Renderer {
         ctx.lineTo(this.vx(c), this.vy(r + 1));
       }
     ctx.stroke();
+  }
+
+  /**
+   * Draw the hedge walls as standing hedgerows for the solved-board reveal.
+   *
+   * Pseudo-3D extrusion for a slightly-tilted aerial view: the wall path is
+   * stroked repeatedly at decreasing downward offsets in a dark "side face"
+   * green, then once in place as the top face with a sunlit highlight along
+   * the crown.  Horizontal walls show their full southern face; vertical
+   * walls show a side face at their southern end.
+   *
+   * `t` ∈ (0..1] animates the transformation — width, height, shadow and
+   * highlight all scale with it, so t→0 matches the flat in-game look.
+   */
+  _drawHedgerows(state, t) {
+    const { ctx } = this;
+    const C = state.cells;
+
+    const walls = new Path2D();
+    for (let r = 0; r <= C; r++)
+      for (let c = 0; c < C; c++)
+        if (state.hEdges[r][c] === EDGE_BLACK) {
+          walls.moveTo(this.vx(c), this.vy(r));
+          walls.lineTo(this.vx(c + 1), this.vy(r));
+        }
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c <= C; c++)
+        if (state.vEdges[r][c] === EDGE_BLACK) {
+          walls.moveTo(this.vx(c), this.vy(r));
+          walls.lineTo(this.vx(c), this.vy(r + 1));
+        }
+
+    const targetW = this._cellSize * THEME.hedgeWidthScale;
+    const w = THEME.edgeWidthBlack + (targetW - THEME.edgeWidthBlack) * t;
+    const h = this._cellSize * THEME.hedgeHeightScale * t;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = w;
+
+    // Deepest side stroke carries a soft ground shadow to seat the hedges.
+    ctx.save();
+    ctx.translate(0, h);
+    ctx.shadowColor = `rgba(15, 26, 20, ${0.35 * t})`;
+    ctx.shadowBlur = 7;
+    ctx.shadowOffsetY = 3;
+    ctx.strokeStyle = THEME.hedgeSide;
+    ctx.stroke(walls);
+    ctx.restore();
+
+    // Side faces — the same path at decreasing vertical offsets.
+    ctx.strokeStyle = THEME.hedgeSide;
+    const step = Math.max(1, h / 6);
+    for (let dy = h - step; dy > 0; dy -= step) {
+      ctx.save();
+      ctx.translate(0, dy);
+      ctx.stroke(walls);
+      ctx.restore();
+    }
+
+    // Top face, then a sunlit highlight along the crown.
+    ctx.strokeStyle = THEME.edgeBlack;
+    ctx.stroke(walls);
+    ctx.globalAlpha = 0.35 * t;
+    ctx.strokeStyle = THEME.hedgeHighlight;
+    ctx.lineWidth = w * 0.45;
+    ctx.stroke(walls);
+
+    ctx.restore();
   }
 
   _drawVertex(ctx, state, r, c, showErrors = true) {
