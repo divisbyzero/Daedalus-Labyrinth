@@ -347,9 +347,11 @@ class Renderer {
    * offsets in a dark "side face" green, then once in place as the top face
    * with a sunlit highlight along the crown.
    *
-   * Walls separating two enclosed cells are not extruded — they dissolve
-   * with the apparatus so each connected enclosed region reads as one solid
-   * stand of trees bounded by a single hedge.
+   * Enclosed cells are raised along with the walls as solid blocks of the
+   * same green and height, so each connected enclosed region reads as one
+   * mass of clipped topiary rather than a walled courtyard.  Walls between
+   * two enclosed cells are therefore left out of the extrusion; during the
+   * animation they linger on top of the rising block and dissolve.
    *
    * `t` ∈ (0..1] animates the transformation — width, height, shadow and
    * highlight all scale with it, so t→0 matches the flat in-game look.
@@ -358,7 +360,7 @@ class Renderer {
     const { ctx } = this;
     const C = state.cells;
 
-    // Map of enclosed (tree-stand) cells, used to find internal dividers.
+    // Map of enclosed (topiary) cells.
     const enclosed = Array.from({ length: C }, (_, r) =>
       Array.from({ length: C }, (_, c) => state.getCellColor(r, c) === CELL.ENCLOSED));
 
@@ -381,27 +383,31 @@ class Renderer {
           p.lineTo(this.vx(c), this.vy(r + 1));
         }
 
+    // Enclosed regions as one filled silhouette (adjacent rects merge).
+    const blocks = new Path2D();
+    let hasBlocks = false;
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c < C; c++)
+        if (enclosed[r][c]) {
+          blocks.rect(this.vx(c), this.vy(r), this._cellSize, this._cellSize);
+          hasBlocks = true;
+        }
+
     const targetW = this._cellSize * THEME.hedgeWidthScale;
     const w = THEME.edgeWidthBlack + (targetW - THEME.edgeWidthBlack) * t;
     const h = this._cellSize * THEME.hedgeHeightScale * t;
     const slant = THEME.hedgeSlant;
+    // Block tops blend from the in-play sage into hedge green as they rise.
+    const blockTop = _hexLerp(THEME.cellEnclosed, THEME.edgeBlack, t);
 
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = w;
 
-    // Internal dividers fade out with the rest of the apparatus.
-    if (t < 1) {
-      ctx.save();
-      ctx.globalAlpha = 1 - t;
-      ctx.strokeStyle = THEME.edgeBlack;
-      ctx.lineWidth = THEME.edgeWidthBlack;
-      ctx.stroke(dividers);
-      ctx.restore();
-    }
-
     // Deepest side stroke carries a soft ground shadow to seat the hedges.
+    // Blocks need no shadow pass of their own — their boundary walls ring
+    // them, so the wall shadow already outlines each region.
     ctx.save();
     ctx.translate(h * slant, h);
     ctx.shadowColor = `rgba(15, 26, 20, ${0.35 * t})`;
@@ -412,19 +418,36 @@ class Renderer {
     ctx.stroke(walls);
     ctx.restore();
 
-    // Side faces — the same path at decreasing down-right offsets.
+    // Side faces — walls and blocks at decreasing down-right offsets.
     ctx.strokeStyle = THEME.hedgeSide;
+    ctx.fillStyle = THEME.hedgeSide;
     const step = Math.max(1, h / 6);
-    for (let d = h - step; d > 0; d -= step) {
+    for (let d = h; d > 0; d -= step) {
       ctx.save();
       ctx.translate(d * slant, d);
+      if (hasBlocks) ctx.fill(blocks);
       ctx.stroke(walls);
       ctx.restore();
     }
 
-    // Top face, then a sunlit highlight along the crown.
+    // Top faces: blocks first, then walls flow over the region boundaries.
+    if (hasBlocks) {
+      ctx.fillStyle = blockTop;
+      ctx.fill(blocks);
+    }
     ctx.strokeStyle = THEME.edgeBlack;
     ctx.stroke(walls);
+
+    // Old dividers linger on the rising block tops and dissolve.
+    if (t < 1) {
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.lineWidth = THEME.edgeWidthBlack;
+      ctx.stroke(dividers);
+      ctx.restore();
+    }
+
+    // Sunlit highlight along the crown of the walls.
     ctx.globalAlpha = 0.35 * t;
     ctx.strokeStyle = THEME.hedgeHighlight;
     ctx.lineWidth = w * 0.45;
