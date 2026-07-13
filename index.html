@@ -25,6 +25,13 @@
 <body>
   <header>
     <h1>Daedalus' Labyrinth</h1>
+    <button id="btnPrint" class="icon-btn print-btn" aria-label="Download puzzle as PDF" title="Download puzzle as PDF">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
+        <path d="M7 3h10v4H7z" />
+        <path d="M5 8h14a2 2 0 0 1 2 2v6h-4v-2H7v2H3v-6a2 2 0 0 1 2-2z" />
+        <path d="M8 15h8v6H8z" />
+      </svg>
+    </button>
     <button id="btnPrefs" class="icon-btn prefs-btn" aria-label="Preferences">⚙</button>
     <button id="btnHelp" class="icon-btn help-btn" aria-label="Help / How to Play">?</button>
   </header>
@@ -114,6 +121,17 @@
             <span class="toggle-track"></span>
           </label>
         </div>
+        <p class="prefs-section-heading">Printing</p>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Paper size</span>
+            <span class="pref-desc">For the downloadable PDF</span>
+          </div>
+          <select id="prefPaper">
+            <option value="letter">Letter</option>
+            <option value="a4">A4</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
@@ -177,6 +195,7 @@
   <script src="js/state.js?v=3"></script>
   <script src="js/render.js?v=3"></script>
   <script src="js/generator.js?v=3"></script>
+  <script src="js/pdf.js?v=1"></script>
   <script src="js/main.js?v=4"></script>
 </body>
 

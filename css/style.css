@@ -381,6 +381,14 @@ canvas {
   font-size: 20px;
 }
 
+.print-btn {
+  right: calc(env(safe-area-inset-right, 0px) + 108px);
+}
+
+.print-btn svg {
+  display: block;
+}
+
 /* ── Modal animations ───────────────────────────────────────────────────────── */
 
 @keyframes backdrop-in {

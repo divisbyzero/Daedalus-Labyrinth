@@ -104,7 +104,7 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 const PREFS_KEY = 'daedalus_prefs';
 const PREFS_VERSION = 2;
 const IS_PHONE_DEFAULT_SIZE = Math.min(screen.width, screen.height) <= 480 ? 7 : 10;
-const prefs = { difficulty: 1, boardSize: IS_PHONE_DEFAULT_SIZE, showErrors: true, showTimer: true };
+const prefs = { difficulty: 1, boardSize: IS_PHONE_DEFAULT_SIZE, showErrors: true, showTimer: true, paperSize: 'letter' };
 
 function loadPrefs() {
   try {
@@ -114,6 +114,7 @@ function loadPrefs() {
     if (typeof saved.boardSize === 'number') prefs.boardSize = saved.boardSize;
     if (typeof saved.showErrors === 'boolean') prefs.showErrors = saved.showErrors;
     if (typeof saved.showTimer === 'boolean') prefs.showTimer = saved.showTimer;
+    if (saved.paperSize === 'letter' || saved.paperSize === 'a4') prefs.paperSize = saved.paperSize;
   } catch (_) { }
 }
 
@@ -129,12 +130,15 @@ const prefSize = document.getElementById('prefSize');
 const prefDiff = document.getElementById('prefDiff');
 const prefShowErrors = document.getElementById('prefShowErrors');
 const prefShowTimer = document.getElementById('prefShowTimer');
+const prefPaper = document.getElementById('prefPaper');
+const btnPrint = document.getElementById('btnPrint');
 
 function syncPrefsUI() {
   prefSize.value = String(prefs.boardSize);
   prefDiff.value = String(prefs.difficulty);
   prefShowErrors.checked = prefs.showErrors;
   prefShowTimer.checked = prefs.showTimer;
+  prefPaper.value = prefs.paperSize;
 }
 
 // Snapshot of the game-setup prefs taken when the modal opens, used to
@@ -234,7 +238,7 @@ function handlePrefsKey(e) {
   }
   if (e.key === 'Tab') {
     e.preventDefault();
-    const focusable = [prefsClose, prefSize, prefDiff, prefShowErrors, prefShowTimer];
+    const focusable = [prefsClose, prefSize, prefDiff, prefShowErrors, prefShowTimer, prefPaper];
     const idx = focusable.indexOf(document.activeElement);
     const next = e.shiftKey
       ? (idx - 1 + focusable.length) % focusable.length
@@ -258,6 +262,27 @@ prefDiff.addEventListener('change', () => {
   prefs.difficulty = parseInt(prefDiff.value, 10);
   savePrefs();
 });
+
+prefPaper.addEventListener('change', () => {
+  prefs.paperSize = prefPaper.value;
+  savePrefs();
+});
+
+function downloadPuzzlePdf() {
+  if (!state) return;
+  const pdf = buildPuzzlePdf(state, prefs.paperSize);
+  const blob = new Blob([pdf], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `daedalus-labyrinth-${state.cells}x${state.cells}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+btnPrint.addEventListener('click', downloadPuzzlePdf);
 
 prefShowErrors.addEventListener('change', () => {
   prefs.showErrors = prefShowErrors.checked;
