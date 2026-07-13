@@ -186,7 +186,18 @@ class Renderer {
     // between all four edges.  Phones get a larger floor for finger taps.
     const minTolerance = isPhone ? 18 : THEME.hitTolerance;
     this._hitTolerance = Math.max(minTolerance, Math.min(this._cellSize * 0.34, 24));
-    const total = this._margin * 2 + cells * this._cellSize;
+    this.sizeFixed(cells, this._cellSize, this._margin);
+  }
+
+  /**
+   * Size the canvas for an exact cell size and margin.  Used by resize()
+   * and directly by non-interactive boards (the How to Play example).
+   */
+  sizeFixed(cells, cellSize, margin) {
+    this._lastCells = cells;
+    this._cellSize = cellSize;
+    this._margin = margin;
+    const total = margin * 2 + cells * cellSize;
     const dpr = this.dpr;
     this.canvas.width = total * dpr;
     this.canvas.height = total * dpr;

@@ -24,7 +24,39 @@ const helpClose = document.getElementById('helpClose');
 const HELP_SEEN_KEY = 'daedalus_help_seen';
 const CLOSE_DURATION_MS = 150;
 
+// A hand-picked solved 5×5 puzzle shown inside How to Play.
+// h/v strings use the edge-state values: 0 = removed, 2 = hedge.
+const HELP_DEMO = {
+  entry: { isH: false, r: 2, c: 5 },
+  exit: { isH: true, r: 0, c: 3 },
+  clues: [
+    [1, 1, 1], [1, 2, 2], [1, 3, 1], [1, 4, 3], [2, 1, 1],
+    [2, 3, 2], [2, 4, 4], [3, 1, 2], [3, 4, 2], [4, 1, 1],
+  ],
+  h: ['22202', '02002', '20222', '02000', '00200', '22222'],
+  v: ['200222', '202022', '202020', '220222', '202202'],
+};
+
+let helpDemoRenderer = null;
+
+function renderHelpDemo() {
+  if (!helpDemoRenderer) {
+    helpDemoRenderer = new Renderer(document.getElementById('helpDemoCanvas'));
+  }
+  const s = new GameState(5);
+  s.loadClues(HELP_DEMO.clues.map(([r, c, value]) => ({ r, c, value })));
+  s.hEdges = HELP_DEMO.h.map(row => [...row].map(Number));
+  s.vEdges = HELP_DEMO.v.map(row => [...row].map(Number));
+  s.entry = HELP_DEMO.entry;
+  s.exit = HELP_DEMO.exit;
+  // Keep the flat in-play look — suppress the solved-board 3-D reveal.
+  s.checkWin = () => false;
+  helpDemoRenderer.sizeFixed(5, 40, 20);
+  helpDemoRenderer.render(s, null, { showErrors: false });
+}
+
 function openHelpModal() {
+  renderHelpDemo();
   helpBackdrop.removeAttribute('hidden');
   helpBackdrop.classList.remove('closing');
   helpClose.focus();

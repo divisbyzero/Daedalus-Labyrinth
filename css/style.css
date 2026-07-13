@@ -690,6 +690,31 @@ canvas {
   color: var(--color-hedge);
 }
 
+/* Solved example board inside the help modal */
+.help-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+.help-demo canvas {
+  cursor: default;
+  box-shadow: none;
+  border-radius: 6px;
+  max-width: 100%;
+  height: auto;
+}
+
+.help-demo-caption {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #4A5A52;
+  text-align: center;
+  max-width: 340px;
+}
+
 .help-subtle {
   font-size: 0.9em;
   /* smaller than other section headers */
