@@ -20,10 +20,11 @@ const PDF_PAPER = {
 const PDF_TITLE = "Daedalus' Labyrinth";
 const PDF_URL = 'divisbyzero.github.io/Daedalus-Labyrinth';
 const PDF_INSTRUCTIONS = [
-  '1. Turn the grid lines into hedges so that every numbered dot touches exactly that many hedge segments.',
+  'Instructions',
+    '1. Turn the grid lines into hedges so that every numbered dot touches exactly that many hedge segments.',
   '2. Every square is bounded by two or four hedges.',
   '3. The open squares form a single unbroken path labyrinth between the exits.',
-  '4. Hint for easier play: Use one color (or a dark line) to draw the hedges, and use a second (or a faint line) to show the labyrinth path as it is being constructed.',
+  'Hint for easier play: Use one color (or a dark line) to draw the hedges, and use a second (or a faint line) to show the labyrinth path as it is being constructed.',
 ];
 
 function _fmt(n) {
