@@ -42,6 +42,9 @@ const PALETTE = {
   // Solved-board hedgerows
   hedgeSide: '#17392B',      // shadowed side face of a standing hedge
   hedgeHighlight: '#5E9678', // sunlit crown along the top face
+
+  // Gates (entrance/exit)
+  gatePost: '#1C4A38',       // gate piers — denser than the hedge green
 };
 
 // Duration of the solved-board "reveal" transformation (also read by main.js
@@ -116,6 +119,12 @@ const THEME = {
   hedgeWidthScale: 0.16,   // final hedge width, as a fraction of cell size
   hedgeHeightScale: 0.18,  // extrusion height, as a fraction of cell size
   hedgeSlant: 0.45,        // horizontal drift per unit of drop (light from upper left)
+
+  // Gates (entrance/exit): stone threshold through the gap + flanking piers
+  gateThreshold: PALETTE.regionCompleted,
+  gatePost: PALETTE.gatePost,
+  gateStubScale: 0.45,     // threshold length, as a fraction of cell size
+  gatePostScale: 0.13,     // pier radius, as a fraction of cell size
 };
 
 /**
@@ -256,6 +265,10 @@ class Renderer {
       ctx.stroke();
     }
 
+    // 1a. Gate thresholds — stone underfoot, beneath the walls.
+    this._drawThreshold(state.entry, reveal);
+    this._drawThreshold(state.exit, reveal);
+
     // 2. Edges — flat lines during play; standing hedgerows once solved.
     // (During the reveal, undecided GRAY edges are implicit hedges and are
     // drawn by _drawHedgerows rather than as thin guides.)
@@ -280,6 +293,9 @@ class Renderer {
       }
       ctx.restore();
     }
+
+    // 4. Gate piers — always at full strength; they rise with the reveal.
+    this._drawGatePosts(state, reveal);
   }
 
   /**
@@ -461,6 +477,82 @@ class Renderer {
     ctx.stroke(walls);
 
     ctx.restore();
+  }
+
+  /**
+   * Stone threshold extending outward through an entry/exit gap — a short
+   * tab of path-colored stone, rounded on its outer end, showing where the
+   * walking path leaves the board.
+   *
+   * During the reveal the extruded walls' visual bases sit down-right of
+   * the flat grid line, so the threshold shifts with them to stay flush
+   * with the gate mouth at floor level.
+   */
+  _drawThreshold(edge, reveal = 0) {
+    if (!edge) return;
+    const { ctx } = this;
+    const cs = this._cellSize;
+    const L = Math.min(cs * THEME.gateStubScale, this._margin - 2);
+    const rad = Math.min(10, L * 0.5);
+    const { isH, r, c } = edge;
+    const drop = cs * THEME.hedgeHeightScale * reveal;
+    // Extend the inner edge under the maze floor by at least the shift
+    // distance, so the down-right translation can never open a gap between
+    // floor and threshold (it pushes right- and bottom-gate thresholds
+    // away from the board).
+    const eV = drop + 2;                      // inner extension, vertical gates
+    const eH = drop * THEME.hedgeSlant + 2;   // inner extension, horizontal gates
+    let x, y, w, h, radii; // radii: [top-left, top-right, bottom-right, bottom-left]
+    if (isH) {
+      x = this.vx(c); w = cs;
+      if (r === 0) { y = this.vy(r) - L; h = L + eV; radii = [rad, rad, 0, 0]; }
+      else { y = this.vy(r) - eV; h = L + eV; radii = [0, 0, rad, rad]; }
+    } else {
+      y = this.vy(r); h = cs;
+      if (c === 0) { x = this.vx(c) - L; w = L + eH; radii = [rad, 0, 0, rad]; }
+      else { x = this.vx(c) - eH; w = L + eH; radii = [0, rad, rad, 0]; }
+    }
+    ctx.save();
+    ctx.translate(drop * THEME.hedgeSlant, drop);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, w, h, radii);
+    else ctx.rect(x, y, w, h);
+    ctx.fillStyle = THEME.gateThreshold;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /**
+   * Solid pier dots at the two vertices flanking each gate gap.  Drawn last
+   * and never faded; during the reveal they get the same down-right
+   * extrusion as the hedge walls so they rise into standing pillars.
+   */
+  _drawGatePosts(state, reveal = 0) {
+    const { ctx } = this;
+    const R = Math.max(6, this._cellSize * THEME.gatePostScale);
+    for (const edge of [state.entry, state.exit]) {
+      if (!edge) continue;
+      const { isH, r, c } = edge;
+      const pts = isH
+        ? [[this.vx(c), this.vy(r)], [this.vx(c + 1), this.vy(r)]]
+        : [[this.vx(c), this.vy(r)], [this.vx(c), this.vy(r + 1)]];
+      for (const [x, y] of pts) {
+        if (reveal > 0) {
+          const h = this._cellSize * THEME.hedgeHeightScale * reveal;
+          const step = Math.max(1, h / 6);
+          ctx.fillStyle = THEME.hedgeSide;
+          for (let d = h; d > 0; d -= step) {
+            ctx.beginPath();
+            ctx.arc(x + d * THEME.hedgeSlant, y + d, R, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.beginPath();
+        ctx.arc(x, y, R, 0, Math.PI * 2);
+        ctx.fillStyle = THEME.gatePost;
+        ctx.fill();
+      }
+    }
   }
 
   _drawVertex(ctx, state, r, c, showErrors = true) {
