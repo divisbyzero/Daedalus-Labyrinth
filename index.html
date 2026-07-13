@@ -43,6 +43,7 @@
     </div>
     <div id="toolbarCenter">
       <div id="timerDisplay" class="timer-display">0:00</div>
+      <button id="btnViewToggle" class="view-toggle" hidden>View solution</button>
     </div>
     <div id="canvasWrapper">
       <canvas id="gameCanvas"></canvas>
@@ -154,10 +155,13 @@
 
         <p>Every square is either on the path—two openings and two hedges—or walled off on all four sides. </p>
 
-        <p>The colors track your progress: the walking path is brown stone, and dark green squares are walled-off inaccessible regions. A red dot or a red square marks an error—too many hedges meeting at a dot, or a square bounded by
+        <p>The colors track your progress: the walking path is brown stone, and dark green squares are walled-off
+          inaccessible regions. A red dot or a red square marks an error—too many hedges meeting at a dot, or a square
+          bounded by
           exactly one or three hedges.</p>
 
-          <p>The puzzle is solved when the hedges bound one continuous path joining the exits—no loops, no dead ends, every clue satisfied. Every line must be a hedge or be removed; no thin undecided lines
+        <p>The puzzle is solved when the hedges bound one continuous path joining the exits—no loops, no dead ends,
+          every clue satisfied. Every line must be a hedge or be removed; no thin undecided lines
           remain.</p>
 
         <div class="help-demo">

@@ -213,7 +213,7 @@ class Renderer {
 
   // ── Main render ───────────────────────────────────────────────────────────
 
-  render(state, highlightEdge = null, prefs = {}) {
+  render(state, highlightEdge = null, prefs = {}, flatView = false) {
     const { ctx } = this;
     const C = state.cells;
     const W = this._margin * 2 + C * this._cellSize;
@@ -221,8 +221,10 @@ class Renderer {
 
     // Solved-board reveal: 0 = normal play rendering, 1 = full labyrinth
     // (apparatus faded out, hedges drawn as standing hedgerows).
+    // `flatView` forces the flat clue-board rendering even when solved —
+    // used by the post-win plan/labyrinth toggle and the help example.
     const isSolved = state.checkWin();
-    const reveal = isSolved ? this._revealProgress(state.solvedAt) : 0;
+    const reveal = isSolved && !flatView ? this._revealProgress(state.solvedAt) : 0;
 
     // Background
     ctx.fillStyle = THEME.background;

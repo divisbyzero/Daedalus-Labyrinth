@@ -49,10 +49,9 @@ function renderHelpDemo() {
   s.vEdges = HELP_DEMO.v.map(row => [...row].map(Number));
   s.entry = HELP_DEMO.entry;
   s.exit = HELP_DEMO.exit;
-  // Keep the flat in-play look — suppress the solved-board 3-D reveal.
-  s.checkWin = () => false;
   helpDemoRenderer.sizeFixed(5, 40, 20);
-  helpDemoRenderer.render(s, null, { showErrors: false });
+  // flatView keeps the in-play look — no solved-board 3-D reveal.
+  helpDemoRenderer.render(s, null, { showErrors: false }, true);
 }
 
 function openHelpModal() {
@@ -307,6 +306,26 @@ let renderer = null;
 
 const timerDisplay = document.getElementById('timerDisplay');
 const toolbarCenter = document.getElementById('toolbarCenter');
+const btnViewToggle = document.getElementById('btnViewToggle');
+
+// Post-win view toggle: false = 3-D labyrinth, true = flat clue board.
+let solvedViewFlat = false;
+
+function updateViewToggleLabel() {
+  btnViewToggle.textContent = solvedViewFlat ? 'View labyrinth' : 'View solution';
+}
+
+function showViewToggle() {
+  solvedViewFlat = false;
+  updateViewToggleLabel();
+  btnViewToggle.hidden = false;
+}
+
+btnViewToggle.addEventListener('click', () => {
+  solvedViewFlat = !solvedViewFlat;
+  updateViewToggleLabel();
+  redraw();
+});
 let timerStart = null;
 let timerInterval = null;
 let timerDone = false;
@@ -391,6 +410,9 @@ function startTimer() {
   timerPausedAt = null;
   timerDisplay.textContent = '0:00';
   timerDisplay.className = 'timer-display';
+  timerDisplay.hidden = false;
+  solvedViewFlat = false;
+  btnViewToggle.hidden = true;
   toolbarCenter.hidden = !prefs.showTimer;
   if (state) { state.solvedTime = null; state.solvedAt = null; }
   if (isGamePaused()) {
@@ -438,6 +460,7 @@ function markTimerSolved() {
     : 'Solved!';
   timerDisplay.classList.add('timer-display--solved');
   toolbarCenter.hidden = false;
+  showViewToggle();
   animateSolvedIntro();
 }
 
@@ -479,8 +502,12 @@ function redraw() {
   // first frame (render reads state.solvedAt for the transformation).
   if (state.checkWin() && !state.cheated) {
     markTimerSolved();
+  } else if (!btnViewToggle.hidden && !state.checkWin()) {
+    // Board was edited after being solved — the view toggle no longer applies.
+    btnViewToggle.hidden = true;
+    solvedViewFlat = false;
   }
-  renderer.render(state, pressEdge, prefs);
+  renderer.render(state, pressEdge, prefs, solvedViewFlat);
   updatePauseUI();
   updateButtons();
   updateStatus();
@@ -653,7 +680,11 @@ btnShowSolution.addEventListener('click', () => {
     // Freeze the timer for good — prevents pause/resume from restarting it.
     stopTimer();
     timerDone = true;
-    toolbarCenter.hidden = true;
+    // No banner for a revealed solution, but the plan/labyrinth toggle is
+    // exactly what someone who asked for the solution wants.
+    timerDisplay.hidden = true;
+    toolbarCenter.hidden = false;
+    showViewToggle();
     applySolvedEdgesToState(state, solved);
     // The revealed solution gets the same labyrinth transformation as a win.
     state.solvedAt = Date.now();

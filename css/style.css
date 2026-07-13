@@ -156,8 +156,16 @@ body.is-phone .toolbar-group--secondary {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 14px;
   width: 100%;
   padding: 2px 0 6px;
+}
+
+/* Post-win plan/labyrinth view toggle — lives beside the Solved! banner */
+.view-toggle {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+  border-radius: 14px;
 }
 
 .toolbar-divider {
