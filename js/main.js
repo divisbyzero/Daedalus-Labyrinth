@@ -379,6 +379,17 @@ function clearPause(reason) {
   updatePauseUI();
 }
 
+/**
+ * A deliberate game action (New Game, Show Solution, Reset) means the
+ * player is back at the board — lift any manual or away-from-tab pause.
+ * (Modal pauses are unaffected; these buttons can't be clicked while a
+ * modal is open.)
+ */
+function resumeFromPause() {
+  clearPause('manual');
+  clearPause('visibility');
+}
+
 function toggleManualPause() {
   if (isGamePaused()) {
     clearPause('manual');
@@ -658,6 +669,7 @@ btnUndo.addEventListener('click', () => { if (state) { state.undo(); redraw(); }
 btnRedo.addEventListener('click', () => { if (state) { state.redo(); redraw(); } });
 btnReset.addEventListener('click', () => {
   if (!state) return;
+  resumeFromPause();
   // reset() preserves clues and re-opens entry/exit automatically.
   state.reset();
   startTimer();
@@ -666,6 +678,7 @@ btnReset.addEventListener('click', () => {
 
 btnShowSolution.addEventListener('click', () => {
   if (!state) return;
+  resumeFromPause();
   setStatus('Solving…');
   afterPaint(() => {
     const clueGrid = buildClueGridFromState(state);
@@ -696,6 +709,7 @@ btnShowSolution.addEventListener('click', () => {
 // ── Generate ──────────────────────────────────────────────────────────────────
 
 function doGenerate() {
+  resumeFromPause();
   const cells = prefs.boardSize;
   const diff = prefs.difficulty;
   setStatus('Generating…');
