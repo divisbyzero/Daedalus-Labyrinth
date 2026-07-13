@@ -2,6 +2,8 @@
 
 A browser-based logic puzzle. You play as Daedalus, shaping a labyrinth one hedge at a time.
 
+It's a grid-deduction puzzle designed as the dual of [Loopy](https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/loopy.html) from Simon Tatham's Portable Puzzle Collection (itself an implementation of Nikoli's Slitherlink): instead of tracing the loop, you plant the hedges, and the path through the labyrinth emerges as what's left.
+
 **[Play it here](https://divisbyzero.github.io/Daedalus-Labyrinth/)**
 
 ## How to play

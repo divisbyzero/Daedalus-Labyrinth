@@ -315,8 +315,8 @@ function updateViewToggleLabel() {
   btnViewToggle.textContent = solvedViewFlat ? 'View labyrinth' : 'View solution';
 }
 
-function showViewToggle() {
-  solvedViewFlat = false;
+function showViewToggle(flat = false) {
+  solvedViewFlat = flat;
   updateViewToggleLabel();
   btnViewToggle.hidden = false;
 }
@@ -324,6 +324,12 @@ function showViewToggle() {
 btnViewToggle.addEventListener('click', () => {
   solvedViewFlat = !solvedViewFlat;
   updateViewToggleLabel();
+  if (!solvedViewFlat && state && !state.solvedAt) {
+    // First look at the labyrinth (the solution was shown flat) — run the
+    // rise animation now.
+    state.solvedAt = Date.now();
+    animateSolvedIntro();
+  }
   redraw();
 });
 let timerStart = null;
@@ -693,16 +699,14 @@ btnShowSolution.addEventListener('click', () => {
     // Freeze the timer for good — prevents pause/resume from restarting it.
     stopTimer();
     timerDone = true;
-    // No banner for a revealed solution, but the plan/labyrinth toggle is
-    // exactly what someone who asked for the solution wants.
+    // No banner for a revealed solution.  It opens in the flat annotated
+    // view; "View labyrinth" runs the 3-D rise on demand (solvedAt stays
+    // unset until then so the rise animates on first viewing).
     timerDisplay.hidden = true;
     toolbarCenter.hidden = false;
-    showViewToggle();
+    showViewToggle(true);
     applySolvedEdgesToState(state, solved);
-    // The revealed solution gets the same labyrinth transformation as a win.
-    state.solvedAt = Date.now();
-    redraw(); // paint the first frame even if rAF is throttled (hidden tab)
-    animateSolvedIntro();
+    redraw();
   });
 });
 
