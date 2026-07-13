@@ -655,6 +655,8 @@ class Renderer {
   _drawGatePosts(state, reveal = 0) {
     const { ctx } = this;
     const R = Math.max(6, this._cellSize * THEME.gatePostScale);
+    // Sunlit crown tone for the domed pillar caps at the reveal.
+    const domeLight = _hexLerp(THEME.gatePost, THEME.hedgeHighlight, 0.55);
     for (const edge of [state.entry, state.exit]) {
       if (!edge) continue;
       const { isH, r, c } = edge;
@@ -676,6 +678,22 @@ class Renderer {
         ctx.arc(x, y, R, 0, Math.PI * 2);
         ctx.fillStyle = THEME.gatePost;
         ctx.fill();
+        if (reveal > 0) {
+          // Rounded cap: sphere shading lit from the upper left, fading in
+          // with the reveal so the flat in-play dot is unchanged.
+          const dome = ctx.createRadialGradient(
+            x - R * 0.35, y - R * 0.4, R * 0.1, x, y, R);
+          dome.addColorStop(0, domeLight);
+          dome.addColorStop(0.65, THEME.gatePost);
+          dome.addColorStop(1, THEME.hedgeSide);
+          ctx.save();
+          ctx.globalAlpha = reveal;
+          ctx.fillStyle = dome;
+          ctx.beginPath();
+          ctx.arc(x, y, R, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
     }
   }
