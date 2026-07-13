@@ -141,24 +141,21 @@
         <p>Build a labyrinth that connects the exits with a single winding path.</p>
 
         <p class="help-subheading">Placing hedges</p>
-        <p>Each grid line between two dots has three states:</p>
+        <p>Each segment between two dots has three possible states.</p>
         <ul>
           <li><span class="help-hedge undecided">Undecided</span> (thin line)</li>
           <li><span class="help-hedge hedge">Hedge</span> (thick line)</li>
           <li><span class="help-hedge removed">Removed</span> (no line)</li>
         </ul>
-        <p>Click a segment to cycle: Undecided → Hedge → Removed → Undecided. Right-click to cycle in reverse. A long
-          press removes a segment directly.</p>
+        <p>Left-click a segment to make it a hedge. Right-click or long-press a segment to remove it.</p>
 
         <p class="help-subheading">The rules</p>
         <p>The number on a dot tells how many hedges meet at that dot.</p>
 
-        <p>Every square is either on the path—two openings and two hedges—or walled off on all four sides. </p>
+        <p>Every square is either on the path—bounded by two openings and two hedges—or walled off by hedges on all four sides. </p>
 
         <p>The colors track your progress: the walking path is brown stone, and dark green squares are walled-off
-          inaccessible regions. A red dot or a red square marks an error—too many hedges meeting at a dot, or a square
-          bounded by
-          exactly one or three hedges.</p>
+          inaccessible regions. A red dot or a red square indicates an error.</p>
 
         <p>The puzzle is solved when the hedges bound one continuous path joining the exits—no loops, no dead ends,
           every clue satisfied. Every line must be a hedge or be removed; no thin undecided lines
