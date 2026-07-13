@@ -51,6 +51,17 @@ const PALETTE = {
 // to keep redrawing until the animation completes).
 const SOLVED_REVEAL_MS = 1100;
 
+/**
+ * Deterministic hash of (r, c, k) → [0, 1).  Used for solved-board texture
+ * so speckles and canopy blobs stay put across redraws instead of
+ * shimmering with every frame.
+ */
+function _hash01(r, c, k) {
+  let h = Math.imul(r + 1, 374761393) ^ Math.imul(c + 1, 668265263) ^ Math.imul(k + 1, 362437);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
 /** Linear interpolation between two '#RRGGBB' colors. */
 function _hexLerp(a, b, t) {
   const pa = parseInt(a.slice(1), 16);
@@ -265,7 +276,10 @@ class Renderer {
       ctx.stroke();
     }
 
-    // 1a. Gate thresholds — stone underfoot, beneath the walls.
+    // 1a. Solved-board floor texture — flagstones on the walking path.
+    if (reveal > 0) this._drawFloorTexture(state, reveal);
+
+    // 1b. Gate thresholds — stone underfoot, beneath the walls.
     this._drawThreshold(state.entry, reveal);
     this._drawThreshold(state.exit, reveal);
 
@@ -381,21 +395,46 @@ class Renderer {
 
     const walls = new Path2D();
     const dividers = new Path2D(); // walls between two enclosed cells
+    const crowns = new Path2D();   // walls that get the sunlit centerline
+    const wallSegs = [];           // wall segments, for the leaf-fleck pass
+    // Walls bordering a stand are part of its broad top: they keep their
+    // dark base and flecks but skip the highlight line, so no bright ring
+    // outlines the stand.
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++)
         if (isHedge(state.hEdges[r][c])) {
-          const isDivider = r > 0 && r < C && enclosed[r - 1][c] && enclosed[r][c];
-          const p = isDivider ? dividers : walls;
-          p.moveTo(this.vx(c), this.vy(r));
-          p.lineTo(this.vx(c + 1), this.vy(r));
+          const above = r > 0 && enclosed[r - 1][c];
+          const below = r < C && enclosed[r][c];
+          if (above && below) {
+            dividers.moveTo(this.vx(c), this.vy(r));
+            dividers.lineTo(this.vx(c + 1), this.vy(r));
+            continue;
+          }
+          walls.moveTo(this.vx(c), this.vy(r));
+          walls.lineTo(this.vx(c + 1), this.vy(r));
+          wallSegs.push({ x: this.vx(c), y: this.vy(r), horiz: true, sr: r, sc: c, k: 200 });
+          if (!above && !below) {
+            crowns.moveTo(this.vx(c), this.vy(r));
+            crowns.lineTo(this.vx(c + 1), this.vy(r));
+          }
         }
     for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++)
         if (isHedge(state.vEdges[r][c])) {
-          const isDivider = c > 0 && c < C && enclosed[r][c - 1] && enclosed[r][c];
-          const p = isDivider ? dividers : walls;
-          p.moveTo(this.vx(c), this.vy(r));
-          p.lineTo(this.vx(c), this.vy(r + 1));
+          const left = c > 0 && enclosed[r][c - 1];
+          const right = c < C && enclosed[r][c];
+          if (left && right) {
+            dividers.moveTo(this.vx(c), this.vy(r));
+            dividers.lineTo(this.vx(c), this.vy(r + 1));
+            continue;
+          }
+          walls.moveTo(this.vx(c), this.vy(r));
+          walls.lineTo(this.vx(c), this.vy(r + 1));
+          wallSegs.push({ x: this.vx(c), y: this.vy(r), horiz: false, sr: r, sc: c, k: 300 });
+          if (!left && !right) {
+            crowns.moveTo(this.vx(c), this.vy(r));
+            crowns.lineTo(this.vx(c), this.vy(r + 1));
+          }
         }
 
     // Enclosed regions as one filled silhouette (adjacent rects merge).
@@ -459,6 +498,28 @@ class Renderer {
       ctx.fillStyle = crown;
       ctx.fill(blocks);
       ctx.restore();
+
+      // Leaf flecks: the same clipped-hedge stipple as the wall crowns,
+      // scattered across the stand tops — one material, one texture.
+      ctx.save();
+      ctx.clip(blocks);
+      for (let r = 0; r < C; r++) {
+        for (let c = 0; c < C; c++) {
+          if (!enclosed[r][c]) continue;
+          for (let i = 0; i < 16; i++) {
+            const bx = this.vx(c) + this._cellSize * _hash01(r, c, 50 + i);
+            const by = this.vy(r) + this._cellSize * _hash01(r, c, 70 + i);
+            const br = 0.7 + 1.0 * _hash01(r, c, 90 + i);
+            const dark = _hash01(r, c, 110 + i) < 0.5;
+            ctx.globalAlpha = (dark ? 0.20 : 0.16) * t;
+            ctx.fillStyle = dark ? THEME.hedgeSide : THEME.hedgeHighlight;
+            ctx.beginPath();
+            ctx.arc(bx, by, br, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
     }
 
     // Old dividers linger on the rising block tops and dissolve.
@@ -470,12 +531,63 @@ class Renderer {
       ctx.restore();
     }
 
-    // Sunlit highlight along the crown of the walls.
+    // Sunlit highlight along the crown of free-standing walls only —
+    // stand-bordering walls stay flat so the stands read as one surface.
     ctx.globalAlpha = 0.35 * t;
     ctx.strokeStyle = THEME.hedgeHighlight;
     ctx.lineWidth = w * 0.45;
-    ctx.stroke(walls);
+    ctx.stroke(crowns);
 
+    // Leaf flecks along the crowns — the same texture as the stand tops.
+    const cs = this._cellSize;
+    for (const s of wallSegs) {
+      for (let i = 0; i < 5; i++) {
+        const along = cs * _hash01(s.sr, s.sc, s.k + i);
+        const across = (0.6 * _hash01(s.sr, s.sc, s.k + 20 + i) - 0.3) * w;
+        const px = s.horiz ? s.x + along : s.x + across;
+        const py = s.horiz ? s.y + across : s.y + along;
+        const rad = 0.7 + 1.0 * _hash01(s.sr, s.sc, s.k + 40 + i);
+        const dark = _hash01(s.sr, s.sc, s.k + 60 + i) < 0.5;
+        ctx.globalAlpha = (dark ? 0.20 : 0.16) * t;
+        ctx.fillStyle = dark ? THEME.hedgeSide : THEME.hedgeHighlight;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Sparse speckles of wear on a uniform stone ground, within the given
+   * rect.  Deterministic per (sa, sb) seed pair, fading in with the reveal.
+   */
+  _drawStoneSpeckles(x, y, w, h, sa, sb, count, t) {
+    const { ctx } = this;
+    for (let i = 0; i < count; i++) {
+      const px = x + w * (0.06 + 0.88 * _hash01(sa, sb, 10 + i));
+      const py = y + h * (0.06 + 0.88 * _hash01(sa, sb, 20 + i));
+      const rad = 0.7 + 1.3 * _hash01(sa, sb, 30 + i);
+      ctx.fillStyle = _hash01(sa, sb, 40 + i) < 0.5
+        ? `rgba(96, 84, 60, ${0.10 * t})`
+        : `rgba(255, 252, 240, ${0.12 * t})`;
+      ctx.beginPath();
+      ctx.arc(px, py, rad, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /** Stone texture on solved-board path cells. */
+  _drawFloorTexture(state, t) {
+    const { ctx } = this;
+    const C = state.cells;
+    const cs = this._cellSize;
+    ctx.save();
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c < C; c++)
+        if (state.getCellColor(r, c) === CELL.PATH)
+          this._drawStoneSpeckles(this.vx(c), this.vy(r), cs, cs, r, c, 5, t);
     ctx.restore();
   }
 
@@ -519,6 +631,8 @@ class Renderer {
     else ctx.rect(x, y, w, h);
     ctx.fillStyle = THEME.gateThreshold;
     ctx.fill();
+    // Same worn-stone speckling as the path flagstones.
+    this._drawStoneSpeckles(x, y, w, h, (isH ? 1000 : 2000) + r, c, 4, reveal);
     ctx.restore();
   }
 
