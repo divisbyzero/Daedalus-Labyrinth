@@ -514,6 +514,22 @@ function setStatus(msg, isError = false) {
   statusMsg.style.background = isError ? 'rgba(196, 112, 88, 0.15)' : '';
 }
 
+// ── Error-highlight grace period ─────────────────────────────────────────────
+// Cycling an edge (Undecided → Hedge → Removed) means a double click passes
+// through the Hedge state; without a grace period the board flashes red
+// between the two clicks.  Edge changes apply instantly — only the error
+// highlighting waits for input to go idle.
+
+const ERROR_GRACE_MS = 350;
+let errorGraceUntil = 0;
+let errorGraceTimer = null;
+
+function deferErrorHighlights() {
+  errorGraceUntil = Date.now() + ERROR_GRACE_MS;
+  clearTimeout(errorGraceTimer);
+  errorGraceTimer = setTimeout(redraw, ERROR_GRACE_MS + 15);
+}
+
 function redraw() {
   // Mark the win before rendering so the reveal animation starts from its
   // first frame (render reads state.solvedAt for the transformation).
@@ -524,7 +540,10 @@ function redraw() {
     btnViewToggle.hidden = true;
     solvedViewFlat = false;
   }
-  renderer.render(state, pressEdge, prefs, solvedViewFlat);
+  const effectivePrefs = Date.now() < errorGraceUntil
+    ? { ...prefs, showErrors: false }
+    : prefs;
+  renderer.render(state, pressEdge, effectivePrefs, solvedViewFlat);
   updatePauseUI();
   updateButtons();
   updateStatus();
@@ -608,6 +627,7 @@ function commitShortPress() {
   pressTimer = null;
   state.clickEdge(pressEdge.isH, pressEdge.r, pressEdge.c, pressForward);
   pressEdge = null;
+  deferErrorHighlights();
   redraw();
 }
 
