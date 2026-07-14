@@ -23,8 +23,8 @@ const PDF_INSTRUCTIONS = [
   'Instructions',
     '1. Turn the grid lines into hedges so that every numbered dot touches exactly that many hedge segments.',
   '2. Every square is bounded by two or four hedges.',
-  '3. The open squares become a single unbroken path between the exits to form the labyrinth.',
-  'Suggestion: Because you can\'t erase the grid lines on the printout to produce the labyrinth path, use one color to draw the hedges, and use a second to show the labyrinth path as it is being constructed.',
+  '3. The open squares must become a single unbroken path between the exits to form the labyrinth.',
+  'Suggestion: Because you can\'t erase the grid lines on the printout to produce the labyrinth path, use one color to draw the hedges, and use a second color to trace parts of the labyrinth path as it is being constructed.',
 ];
 
 function _fmt(n) {
