@@ -23,8 +23,8 @@ const PDF_INSTRUCTIONS = [
   'Instructions',
     '1. Turn the grid lines into hedges so that every numbered dot touches exactly that many hedge segments.',
   '2. Every square is bounded by two or four hedges.',
-  '3. The open squares form a single unbroken path labyrinth between the exits.',
-  'Hint for easier play: Use one color (or a dark line) to draw the hedges, and use a second (or a faint line) to show the labyrinth path as it is being constructed.',
+  '3. The open squares become a single unbroken path between the exits to form the labyrinth.',
+  'Suggestion: Because you can\'t erase the grid lines on the printout to produce the labyrinth path, use one color to draw the hedges, and use a second to show the labyrinth path as it is being constructed.',
 ];
 
 function _fmt(n) {
@@ -45,6 +45,23 @@ function _pdfTextWidth(text, size, bold) {
     return _pdfMeasureCtx.measureText(text).width;
   }
   return text.length * size * (bold ? 0.58 : 0.5);
+}
+
+/** Greedy word-wrap to a maximum width in points. */
+function _pdfWrap(text, size, bold, maxW) {
+  const lines = [];
+  let cur = '';
+  for (const word of text.split(' ')) {
+    const next = cur ? `${cur} ${word}` : word;
+    if (cur && _pdfTextWidth(next, size, bold) > maxW) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
 }
 
 /** Path operators for a full circle (four Bézier arcs). */
@@ -73,9 +90,19 @@ function buildPuzzlePdf(state, paper) {
   const instrSize = 9.5;
   const instrLeading = 13;
 
+  // Wrap the instructions to the page width up front — the wrapped line
+  // count determines how much vertical space the board can use.  The first
+  // entry is a bold heading.
+  const instrLines = [];
+  PDF_INSTRUCTIONS.forEach((text, i) => {
+    const bold = i === 0;
+    for (const line of _pdfWrap(text, instrSize, bold, W - 2 * margin))
+      instrLines.push({ text: line, bold });
+  });
+
   const areaTop = titleBaseline - 24;
   const areaBottom = footerBaseline + footerSize + 16 +
-    PDF_INSTRUCTIONS.length * instrLeading + 10;
+    instrLines.length * instrLeading + 10;
   const side = Math.min(W - 2 * margin, areaTop - areaBottom);
   const cell = side / C;
   const left = (W - side) / 2;
@@ -95,12 +122,11 @@ function buildPuzzlePdf(state, paper) {
   const urlW = _pdfTextWidth(PDF_URL, footerSize, false);
   s += `0.45 0.45 0.45 rg BT /F2 ${footerSize} Tf ${f((W - urlW) / 2)} ${f(footerBaseline)} Td (${_pdfEscape(PDF_URL)}) Tj ET 0 0 0 rg\n`;
 
-  // ── Instructions beneath the grid ─────────────────────────────────────────
+  // ── Instructions beneath the grid (left-aligned to the board edge) ───────
   s += '0.25 0.25 0.25 rg\n';
   let iy = top - side - 20;
-  for (const line of PDF_INSTRUCTIONS) {
-    const lw = _pdfTextWidth(line, instrSize, false);
-    s += `BT /F2 ${f(instrSize)} Tf ${f((W - lw) / 2)} ${f(iy)} Td (${_pdfEscape(line)}) Tj ET\n`;
+  for (const line of instrLines) {
+    s += `BT /F${line.bold ? 1 : 2} ${f(instrSize)} Tf ${f(left)} ${f(iy)} Td (${_pdfEscape(line.text)}) Tj ET\n`;
     iy -= instrLeading;
   }
   s += '0 0 0 rg\n';
