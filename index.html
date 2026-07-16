@@ -103,11 +103,11 @@
         <p class="prefs-section-heading">Gameplay</p>
         <div class="pref-row">
           <div class="pref-label-group">
-            <span class="pref-label">Strict finish</span>
-            <span class="pref-desc">Game ends only when all segments are hedges or are removed</span>
+            <span class="pref-label">Early finish</span>
+            <span class="pref-desc">Game ends when the path is complete, even with unremoved segments</span>
           </div>
-          <label class="toggle-switch" aria-label="Strict finish">
-            <input type="checkbox" id="prefStrictWin">
+          <label class="toggle-switch" aria-label="Early finish">
+            <input type="checkbox" id="prefEarlyFinish">
             <span class="toggle-track"></span>
           </label>
         </div>
@@ -187,8 +187,8 @@
           inaccessible regions. A red dot or a red square indicates an error.</p>
 
         <p>The puzzle is solved when the hedges bound one continuous path joining the exits—no loops, no dead ends,
-          every clue satisfied. The game ends as soon as your hedges fully bound the path—leftover undecided lines
-          are fine. With Strict finish enabled in Preferences, every line must instead be a hedge or be removed.</p>
+          every clue satisfied. Every line must be a hedge or be removed—no thin undecided lines may remain. With
+          Early finish enabled in Preferences, the game instead ends as soon as your hedges fully bound the path.</p>
 
         <div class="help-demo">
           <canvas id="helpDemoCanvas"></canvas>

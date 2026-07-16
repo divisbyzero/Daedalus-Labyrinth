@@ -40,10 +40,10 @@ class GameState {
     // Set to true when the solution is revealed via Show Solution.
     this.cheated = false;
 
-    // Strict finish: when true, an open-mode win additionally requires
-    // every edge to be decided (no gray).  When false (default), bounding
-    // the path with hedges (or carving it) is enough.
-    this.strictWin = false;
+    // Strict finish: when true (the default), an open-mode win requires
+    // every edge to be decided (no gray).  When false (the "Early finish"
+    // preference), bounding the path with hedges (or carving it) is enough.
+    this.strictWin = true;
 
     // The generated solution ({ h, v } edge arrays of EDGE_BLACK/EDGE_NONE),
     // set by generatePuzzle.  Used by the bounded-win check and to resolve
