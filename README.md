@@ -10,8 +10,8 @@ It's a grid-deduction puzzle designed as the dual of [Loopy](https://www.chiark.
 
 Build a labyrinth by placing hedges along the grid lines. The finished maze must form a single continuous path connecting the two exits — no loops, no dead ends. The two gaps in the outer border are the entrance and exit.
 
-- **Left-click** a grid line to cycle it: undecided → hedge → removed
-- **Right-click** to cycle in reverse (a long press removes a line directly)
+- **Click or tap** a grid line to cycle it: undecided → hedge → removed
+- **Press and hold** to remove a line from any state (with a two-button mouse, right-click cycles in reverse)
 - The number on a dot tells you exactly how many hedges meet at that corner
 - Every square is either on the path (two openings) or walled off on all four sides
 
