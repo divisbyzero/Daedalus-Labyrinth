@@ -40,6 +40,11 @@ class GameState {
     // Set to true when the solution is revealed via Show Solution.
     this.cheated = false;
 
+    // Strict finish: when true, an open-mode win additionally requires
+    // every edge to be decided (no gray).  When false (default), carving
+    // the correct path is enough — remaining gray edges count as hedges.
+    this.strictWin = false;
+
     // Undo / redo stacks — each entry: { isH, r, c, from, to }
     this._undoStack = [];
     this._redoStack = [];
@@ -421,10 +426,14 @@ class GameState {
    *   The player does NOT need to manually mark every wall edge; finding
    *   the correct loop path is sufficient.
    *
-   * Open mode: every edge decided (no gray), the doorway graph is a single
-   *   simple path whose endpoints are the cells adjacent to entry and exit
-   *   (entry/exit cells have degree 1 in the internal doorway graph; all
-   *   other path cells have degree 2), and every vertex clue is satisfied.
+   * Open mode: the doorway graph is a single simple path whose endpoints
+   *   are the cells adjacent to entry and exit (entry/exit cells have
+   *   degree 1 in the internal doorway graph; all other path cells have
+   *   degree 2), and every vertex clue is satisfied treating GRAY edges as
+   *   BLACK.  With strictWin set, every edge must also be decided.
+   *   Accepting gray-as-black is sound: any board passing these checks
+   *   completes (gray→black) to a full assignment meeting the solver's
+   *   validity conditions, and generated puzzles have exactly one.
    */
   checkWin() {
     const { adj, degree, N, ck } = this._buildDoorwayGraph();
@@ -452,8 +461,8 @@ class GameState {
       return this._allCluesSatisfiedAssumeGrayIsBlack();
     }
 
-    // Open mode requires every edge decided.
-    if (this.hasGrayEdges()) return false;
+    // Strict finish requires every edge decided.
+    if (this.strictWin && this.hasGrayEdges()) return false;
 
     // Open: one component, exactly two cells have degree 1 (the endpoints),
     //       all others degree 2, and the endpoints are the entry/exit cells.
@@ -471,7 +480,7 @@ class GameState {
     const xIdx = ck(xCell.r, xCell.c);
     if (!((leaves[0] === eIdx && leaves[1] === xIdx) ||
           (leaves[0] === xIdx && leaves[1] === eIdx))) return false;
-    // All vertex clues must be satisfied (no grays remain, so this is exact).
+    // All vertex clues must be satisfied, treating GRAY edges as BLACK.
     return this._allCluesSatisfiedAssumeGrayIsBlack();
   }
 

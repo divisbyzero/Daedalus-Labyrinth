@@ -100,6 +100,17 @@
             <option value="3">Very Hard</option>
           </select>
         </div>
+        <p class="prefs-section-heading">Gameplay</p>
+        <div class="pref-row">
+          <div class="pref-label-group">
+            <span class="pref-label">Strict finish</span>
+            <span class="pref-desc">Game ends only when all segments are hedges or are removed</span>
+          </div>
+          <label class="toggle-switch" aria-label="Strict finish">
+            <input type="checkbox" id="prefStrictWin">
+            <span class="toggle-track"></span>
+          </label>
+        </div>
         <p class="prefs-section-heading">Display</p>
         <div class="pref-row">
           <div class="pref-label-group">
@@ -176,8 +187,8 @@
           inaccessible regions. A red dot or a red square indicates an error.</p>
 
         <p>The puzzle is solved when the hedges bound one continuous path joining the exits—no loops, no dead ends,
-          every clue satisfied. Every line must be a hedge or be removed; no thin undecided lines
-          remain.</p>
+          every clue satisfied. Undecided lines count as hedges; with Strict finish enabled in Preferences, every
+          line must instead be a hedge or be removed.</p>
 
         <div class="help-demo">
           <canvas id="helpDemoCanvas"></canvas>

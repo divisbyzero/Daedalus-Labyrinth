@@ -103,7 +103,7 @@ if (!localStorage.getItem(HELP_SEEN_KEY)) {
 
 const PREFS_KEY = 'daedalus_prefs';
 const PREFS_VERSION = 2;
-const prefs = { difficulty: 1, boardSize: 6, showErrors: true, showTimer: true };
+const prefs = { difficulty: 1, boardSize: 6, showErrors: true, showTimer: true, paperSize: 'letter', strictWin: false };
 
 function loadPrefs() {
   try {
@@ -114,6 +114,7 @@ function loadPrefs() {
     if (typeof saved.showErrors === 'boolean') prefs.showErrors = saved.showErrors;
     if (typeof saved.showTimer === 'boolean') prefs.showTimer = saved.showTimer;
     if (saved.paperSize === 'letter' || saved.paperSize === 'a4') prefs.paperSize = saved.paperSize;
+    if (typeof saved.strictWin === 'boolean') prefs.strictWin = saved.strictWin;
   } catch (_) { }
 }
 
@@ -130,6 +131,7 @@ const prefDiff = document.getElementById('prefDiff');
 const prefShowErrors = document.getElementById('prefShowErrors');
 const prefShowTimer = document.getElementById('prefShowTimer');
 const prefPaper = document.getElementById('prefPaper');
+const prefStrictWin = document.getElementById('prefStrictWin');
 const btnPrint = document.getElementById('btnPrint');
 
 function syncPrefsUI() {
@@ -138,6 +140,7 @@ function syncPrefsUI() {
   prefShowErrors.checked = prefs.showErrors;
   prefShowTimer.checked = prefs.showTimer;
   prefPaper.value = prefs.paperSize;
+  prefStrictWin.checked = prefs.strictWin;
 }
 
 // Snapshot of the game-setup prefs taken when the modal opens, used to
@@ -237,7 +240,7 @@ function handlePrefsKey(e) {
   }
   if (e.key === 'Tab') {
     e.preventDefault();
-    const focusable = [prefsClose, prefSize, prefDiff, prefShowErrors, prefShowTimer, prefPaper];
+    const focusable = [prefsClose, prefSize, prefDiff, prefStrictWin, prefShowErrors, prefShowTimer, prefPaper];
     const idx = focusable.indexOf(document.activeElement);
     const next = e.shiftKey
       ? (idx - 1 + focusable.length) % focusable.length
@@ -265,6 +268,16 @@ prefDiff.addEventListener('change', () => {
 prefPaper.addEventListener('change', () => {
   prefs.paperSize = prefPaper.value;
   savePrefs();
+});
+
+prefStrictWin.addEventListener('change', () => {
+  prefs.strictWin = prefStrictWin.checked;
+  savePrefs();
+  // Applies to the current game too; relaxing may complete it on the spot.
+  if (state) {
+    state.strictWin = prefs.strictWin;
+    redraw();
+  }
 });
 
 function downloadPuzzlePdf() {
@@ -764,6 +777,7 @@ function doGenerate() {
   afterPaint(() => {
     try {
       state = generatePuzzle(cells, diff);
+      state.strictWin = prefs.strictWin;
       renderer = renderer || new Renderer(canvas);
       renderer.resize(cells);
       redraw();
