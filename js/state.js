@@ -41,9 +41,14 @@ class GameState {
     this.cheated = false;
 
     // Strict finish: when true, an open-mode win additionally requires
-    // every edge to be decided (no gray).  When false (default), carving
-    // the correct path is enough — remaining gray edges count as hedges.
+    // every edge to be decided (no gray).  When false (default), bounding
+    // the path with hedges (or carving it) is enough.
     this.strictWin = false;
+
+    // The generated solution ({ h, v } edge arrays of EDGE_BLACK/EDGE_NONE),
+    // set by generatePuzzle.  Used by the bounded-win check and to resolve
+    // undecided edges when rendering a solved board.
+    this.solution = null;
 
     // Undo / redo stacks — each entry: { isH, r, c, from, to }
     this._undoStack = [];
@@ -111,6 +116,19 @@ class GameState {
 
   getEdge(isH, r, c) {
     return isH ? this.hEdges[r][c] : this.vEdges[r][c];
+  }
+
+  /**
+   * Edge state with undecided edges resolved for a solved board: GRAY
+   * resolves to the generated solution when available (a bounded win can
+   * leave corridor doorways and region interiors undecided), otherwise it
+   * counts as a hedge.
+   */
+  effectiveEdge(isH, r, c) {
+    const e = this.getEdge(isH, r, c);
+    if (e !== EDGE_GRAY) return e;
+    if (!this.solution) return EDGE_BLACK;
+    return isH ? this.solution.h[r][c] : this.solution.v[r][c];
   }
 
   _setEdge(isH, r, c, value) {
@@ -418,6 +436,44 @@ class GameState {
   }
 
   /**
+   * True when the player's hedges bound the generated solution's path:
+   * every wall edge adjacent to a solution path cell is BLACK, and no
+   * solution doorway is BLACK.  Corridor doorways and edges internal to
+   * walled-off regions are unconstrained (undecided or removed is fine).
+   * Exact by construction — it compares against the unique solution.
+   */
+  _boundedByHedges() {
+    if (!this.solution) return false;
+    const C = this.cells;
+    const sh = this.solution.h;
+    const sv = this.solution.v;
+    const isPathCell = (r, c) =>
+      r >= 0 && r < C && c >= 0 && c < C &&
+      (sh[r][c] === EDGE_NONE || sh[r + 1][c] === EDGE_NONE ||
+        sv[r][c] === EDGE_NONE || sv[r][c + 1] === EDGE_NONE);
+
+    for (let r = 0; r <= C; r++)
+      for (let c = 0; c < C; c++) {
+        const cur = this.hEdges[r][c];
+        if (sh[r][c] === EDGE_NONE) {
+          if (cur === EDGE_BLACK) return false; // hedge across the path
+        } else if (isPathCell(r - 1, c) || isPathCell(r, c)) {
+          if (cur !== EDGE_BLACK) return false; // bounding hedge missing
+        }
+      }
+    for (let r = 0; r < C; r++)
+      for (let c = 0; c <= C; c++) {
+        const cur = this.vEdges[r][c];
+        if (sv[r][c] === EDGE_NONE) {
+          if (cur === EDGE_BLACK) return false;
+        } else if (isPathCell(r, c - 1) || isPathCell(r, c)) {
+          if (cur !== EDGE_BLACK) return false;
+        }
+      }
+    return true;
+  }
+
+  /**
    * Returns true when the puzzle is solved.
    *
    * Closed mode: the NONE (doorway) edges form exactly one closed cycle
@@ -460,6 +516,10 @@ class GameState {
       // All vertex clues must be satisfied, treating GRAY edges as BLACK.
       return this._allCluesSatisfiedAssumeGrayIsBlack();
     }
+
+    // Relaxed finish: hedges bounding the true path win outright — the
+    // corridor and region interiors may stay undecided.
+    if (!this.strictWin && this._boundedByHedges()) return true;
 
     // Strict finish requires every edge decided.
     if (this.strictWin && this.hasGrayEdges()) return false;

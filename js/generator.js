@@ -913,6 +913,10 @@ function generatePuzzle(cells, diff, timeBudgetMs) {
     const state = new GameState(N);
     state.loadClues(clues);
     state.setEntryExit(entry, exit);
+    // Keep the solution: the relaxed win check compares the player's
+    // bounding hedges against it, and the reveal uses it to resolve
+    // undecided edges.
+    state.solution = { h: hS.map(row => row.slice()), v: vS.map(row => row.slice()) };
     return state;
   }
 }

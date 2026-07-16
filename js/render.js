@@ -243,15 +243,20 @@ class Renderer {
         }
       }
     }
-    // During the reveal, undecided cells melt into the enclosed-greenery tone
-    // so everything that isn't path reads as hedge mass.
-    const undeterminedFill = reveal > 0
-      ? _hexLerp(THEME.cellUndetermined, THEME.cellEnclosed, reveal)
-      : THEME.cellUndetermined;
+    // During the reveal every cell settles into its solved role — stone for
+    // the walking path, hedge green for everything else — with undecided
+    // edges resolved through the stored solution (a bounded win can leave
+    // the corridor and region interiors unclicked).
     for (let r = 0; r < C; r++) {
       for (let c = 0; c < C; c++) {
-        const base = this._cellFill(state.getCellColor(r, c));
-        ctx.fillStyle = base === THEME.cellUndetermined ? undeterminedFill : base;
+        let fill = this._cellFill(state.getCellColor(r, c));
+        if (reveal > 0) {
+          const target = this._effectiveCellIsPath(state, r, c)
+            ? THEME.cellPath
+            : THEME.cellEnclosed;
+          fill = _hexLerp(fill, target, reveal);
+        }
+        ctx.fillStyle = fill;
         ctx.fillRect(this.vx(c), this.vy(r), this._cellSize, this._cellSize);
         if (errorCells.has(`${r},${c}`)) {
           ctx.fillStyle = THEME.cellError;
@@ -399,12 +404,17 @@ class Renderer {
     const { ctx } = this;
     const C = state.cells;
 
-    // The board is solved, so undecided GRAY edges are implicit hedges.
+    // The board is solved; undecided edges resolve through the stored
+    // solution (falling back to hedge when there is none).
+    const effH = (r, c) => state.effectiveEdge(true, r, c);
+    const effV = (r, c) => state.effectiveEdge(false, r, c);
     const isHedge = (e) => e !== EDGE_NONE;
 
     // Map of enclosed (topiary) cells: any cell with no doorway.
     const enclosed = Array.from({ length: C }, (_, r) =>
-      Array.from({ length: C }, (_, c) => state.getCellEdges(r, c).every(isHedge)));
+      Array.from({ length: C }, (_, c) =>
+        isHedge(effH(r, c)) && isHedge(effH(r + 1, c)) &&
+        isHedge(effV(r, c)) && isHedge(effV(r, c + 1))));
 
     const walls = new Path2D();
     const dividers = new Path2D(); // walls between two enclosed cells
@@ -415,7 +425,7 @@ class Renderer {
     // outlines the stand.
     for (let r = 0; r <= C; r++)
       for (let c = 0; c < C; c++)
-        if (isHedge(state.hEdges[r][c])) {
+        if (isHedge(effH(r, c))) {
           const above = r > 0 && enclosed[r - 1][c];
           const below = r < C && enclosed[r][c];
           if (above && below) {
@@ -433,7 +443,7 @@ class Renderer {
         }
     for (let r = 0; r < C; r++)
       for (let c = 0; c <= C; c++)
-        if (isHedge(state.vEdges[r][c])) {
+        if (isHedge(effV(r, c))) {
           const left = c > 0 && enclosed[r][c - 1];
           const right = c < C && enclosed[r][c];
           if (left && right) {
@@ -599,9 +609,17 @@ class Renderer {
     ctx.save();
     for (let r = 0; r < C; r++)
       for (let c = 0; c < C; c++)
-        if (state.getCellColor(r, c) === CELL.PATH)
+        if (this._effectiveCellIsPath(state, r, c))
           this._drawStoneSpeckles(this.vx(c), this.vy(r), cs, cs, r, c, 5, t);
     ctx.restore();
+  }
+
+  /** True when the cell has a doorway after resolving undecided edges. */
+  _effectiveCellIsPath(state, r, c) {
+    return state.effectiveEdge(true, r, c) === EDGE_NONE ||
+      state.effectiveEdge(true, r + 1, c) === EDGE_NONE ||
+      state.effectiveEdge(false, r, c) === EDGE_NONE ||
+      state.effectiveEdge(false, r, c + 1) === EDGE_NONE;
   }
 
   /**
